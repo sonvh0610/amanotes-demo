@@ -16,13 +16,15 @@ export function Register() {
         className="relative w-full max-w-lg bg-white/70 backdrop-blur-[20px] rounded-[3rem] p-8 sm:p-12 shadow-[0_12px_60px_rgba(55,39,77,0.06)] ring-1 ring-[#baa4d3]/20 z-10"
       >
         <div className="flex flex-col items-center mb-8 text-center">
-          <motion.div 
+          <motion.div
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}
             transition={{ delay: 0.2, type: 'spring', stiffness: 200 }}
             className="w-16 h-16 bg-[#006571] rounded-full mb-6 shadow-[0_12px_40px_rgba(0,101,113,0.15)] flex items-center justify-center"
           >
-            <span className="text-[#d7f9ff] font-bold text-2xl font-['Plus_Jakarta_Sans',sans-serif]">+</span>
+            <span className="text-[#d7f9ff] font-bold text-2xl font-['Plus_Jakarta_Sans',sans-serif]">
+              +
+            </span>
           </motion.div>
           <h1 className="text-3xl sm:text-4xl font-bold text-[#15052a] font-['Plus_Jakarta_Sans',sans-serif] tracking-tight">
             Join the Gala
@@ -32,9 +34,15 @@ export function Register() {
           </p>
         </div>
 
-        <form className="flex flex-col gap-5 w-full" onSubmit={(e) => e.preventDefault()}>
+        <form
+          className="flex flex-col gap-5 w-full"
+          onSubmit={(e) => e.preventDefault()}
+        >
           <div className="flex flex-col gap-2">
-            <label className="text-sm font-semibold text-[#37274d] px-2" htmlFor="name">
+            <label
+              className="text-sm font-semibold text-[#37274d] px-2"
+              htmlFor="name"
+            >
               Full Name
             </label>
             <input
@@ -46,7 +54,10 @@ export function Register() {
           </div>
 
           <div className="flex flex-col gap-2">
-            <label className="text-sm font-semibold text-[#37274d] px-2" htmlFor="email">
+            <label
+              className="text-sm font-semibold text-[#37274d] px-2"
+              htmlFor="email"
+            >
               Email Address
             </label>
             <input
@@ -58,7 +69,10 @@ export function Register() {
           </div>
 
           <div className="flex flex-col gap-2">
-            <label className="text-sm font-semibold text-[#37274d] px-2" htmlFor="password">
+            <label
+              className="text-sm font-semibold text-[#37274d] px-2"
+              htmlFor="password"
+            >
               Password
             </label>
             <input
@@ -80,7 +94,10 @@ export function Register() {
 
         <div className="mt-8 text-center text-sm text-[#66547d]">
           Already have an account?{' '}
-          <Link to="/login" className="font-bold text-[#006571] hover:text-[#005862] underline underline-offset-4">
+          <Link
+            to="/login"
+            className="font-bold text-[#006571] hover:text-[#005862] underline underline-offset-4"
+          >
             Log in here
           </Link>
         </div>

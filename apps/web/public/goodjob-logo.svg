@@ -1,0 +1,19 @@
+<svg width="320" height="96" viewBox="0 0 320 96" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="gj_grad" x1="16" y1="16" x2="80" y2="80" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#7C3AED"/>
+      <stop offset="1" stop-color="#2563EB"/>
+    </linearGradient>
+    <linearGradient id="gj_text" x1="108" y1="20" x2="292" y2="78" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#6D28D9"/>
+      <stop offset="1" stop-color="#1D4ED8"/>
+    </linearGradient>
+  </defs>
+
+  <rect x="8" y="8" width="80" height="80" rx="24" fill="url(#gj_grad)"/>
+  <path d="M48 24L53.2 37.2L67 42.4L53.2 47.6L48 60.8L42.8 47.6L29 42.4L42.8 37.2L48 24Z" fill="#FFFFFF"/>
+  <circle cx="27" cy="69" r="5" fill="#C4B5FD"/>
+  <circle cx="69" cy="27" r="4" fill="#BFDBFE"/>
+
+  <text x="108" y="60" fill="url(#gj_text)" font-family="'Plus Jakarta Sans', 'Inter', sans-serif" font-size="42" font-weight="800" letter-spacing="-1">Good Job</text>
+</svg>
