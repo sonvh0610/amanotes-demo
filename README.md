@@ -1,105 +1,81 @@
-# New Nx Repository
+# Amanotes Kudos MVP (Nx Monorepo)
 
-<a alt="Nx logo" href="https://nx.dev" target="_blank" rel="noreferrer"><img src="https://raw.githubusercontent.com/nrwl/nx/master/images/nx-logo.png" width="45"></a>
+This repository implements the case study in [`docs/CASE_STUDY_1_PLAN.md`](./docs/CASE_STUDY_1_PLAN.md) with:
 
-✨ Your new, shiny [Nx workspace](https://nx.dev) is ready ✨.
+- `apps/api`: Fastify + TypeScript + Drizzle + PostgreSQL + Redis + BullMQ + WebSocket.
+- `apps/web`: React + Vite + React Query.
+- `packages/shared`: Shared Zod contracts and realtime event types.
 
-[Learn more about this workspace setup and its capabilities](https://nx.dev/nx-api/js?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects) or run `npx nx graph` to visually explore what was created. Now, let's get you up to speed!
-## Try the full Nx platform
-🚀 If you haven't connected to Nx Cloud yet, [complete your setup here](https://cloud.nx.app/setup/connect-workspace/guide). Get faster builds with remote caching, distributed task execution, and self-healing CI. [See how your workspace can benefit](#nx-cloud).
-## Generate a library
+## Implemented feature scope
 
-```sh
-npx nx g @nx/js:lib packages/pkg1 --publishable --importPath=@my-org/pkg1
+- Auth:
+  - Email/password register + login + logout.
+  - Forgot password + reset password.
+  - OAuth start/callback endpoints for Google and Slack.
+- Kudos:
+  - `POST /kudos` with 10-50 points validation.
+  - No self-kudo validation.
+  - Monthly budget enforcement (200) via transaction and row lock.
+  - Immutable budget + point ledgers.
+- Feed:
+  - `GET /feed` cursor pagination (created_at + id keyset).
+  - Reactions and comments endpoints.
+- Media:
+  - Presigned upload endpoint with image 1MB cap.
+  - Async media validation worker for video duration gate (3 minutes).
+- Rewards:
+  - Reward list + transactional redemption.
+  - Idempotency via `x-idempotency-key`.
+  - Anti double-spend using DB locks + unique idempotency.
+- Notifications:
+  - Persisted inbox (`/notifications`, `/notifications/read`).
+  - Realtime websocket stream (`/notifications/stream`) with Redis fanout.
+
+## Local setup
+
+1. Install dependencies:
+
+```bash
+npm install
 ```
 
-## Run tasks
+2. Start infra:
 
-To build the library use:
-
-```sh
-npx nx build pkg1
+```bash
+docker compose up -d
 ```
 
-To run any task with Nx use:
+3. Copy env:
 
-```sh
-npx nx <target> <project-name>
+```bash
+cp .env.example .env
 ```
 
-These targets are either [inferred automatically](https://nx.dev/concepts/inferred-tasks?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects) or defined in the `project.json` or `package.json` files.
+4. Run migrations:
 
-[More about running tasks in the docs &raquo;](https://nx.dev/features/run-tasks?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-
-## Versioning and releasing
-
-To version and release the library use
-
-```
-npx nx release
+```bash
+npm run migrate
 ```
 
-Pass `--dry-run` to see what would happen without actually releasing the library.
+5. Start API and web:
 
-[Learn more about Nx release &raquo;](https://nx.dev/features/manage-releases?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-
-## Keep TypeScript project references up to date
-
-Nx automatically updates TypeScript [project references](https://www.typescriptlang.org/docs/handbook/project-references.html) in `tsconfig.json` files to ensure they remain accurate based on your project dependencies (`import` or `require` statements). This sync is automatically done when running tasks such as `build` or `typecheck`, which require updated references to function correctly.
-
-To manually trigger the process to sync the project graph dependencies information to the TypeScript project references, run the following command:
-
-```sh
-npx nx sync
+```bash
+npm run dev:api
+npm run dev:web
 ```
 
-You can enforce that the TypeScript project references are always in the correct state when running in CI by adding a step to your CI job configuration that runs the following command:
+## Nx tasks
 
-```sh
-npx nx sync:check
-```
+- API serve: `npm exec nx run @org/api:serve`
+- API migrate: `npm exec nx run @org/api:migrate`
+- Web dev: `npm exec nx run @org/web:dev`
+- Typecheck all: `npm run typecheck`
+- Build all: `npm run build`
 
-[Learn more about nx sync](https://nx.dev/reference/nx-commands#sync)
+## Key API routes
 
-## Nx Cloud
-
-Nx Cloud ensures a [fast and scalable CI](https://nx.dev/ci/intro/why-nx-cloud?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects) pipeline. It includes features such as:
-
-- [Remote caching](https://nx.dev/ci/features/remote-cache?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-- [Task distribution across multiple machines](https://nx.dev/ci/features/distribute-task-execution?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-- [Automated e2e test splitting](https://nx.dev/ci/features/split-e2e-tasks?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-- [Task flakiness detection and rerunning](https://nx.dev/ci/features/flaky-tasks?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-
-### Set up CI (non-Github Actions CI)
-
-**Note:** This is only required if your CI provider is not GitHub Actions.
-
-Use the following command to configure a CI workflow for your workspace:
-
-```sh
-npx nx g ci-workflow
-```
-
-[Learn more about Nx on CI](https://nx.dev/ci/intro/ci-with-nx#ready-get-started-with-your-provider?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-
-## Install Nx Console
-
-Nx Console is an editor extension that enriches your developer experience. It lets you run tasks, generate code, and improves code autocompletion in your IDE. It is available for VSCode and IntelliJ.
-
-[Install Nx Console &raquo;](https://nx.dev/getting-started/editor-setup?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-
-## Useful links
-
-Learn more:
-
-- [Learn more about this workspace setup](https://nx.dev/nx-api/js?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-- [Learn about Nx on CI](https://nx.dev/ci/intro/ci-with-nx?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-- [Releasing Packages with Nx release](https://nx.dev/features/manage-releases?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-- [What are Nx plugins?](https://nx.dev/concepts/nx-plugins?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-
-And join the Nx community:
-
-- [Discord](https://go.nx.dev/community)
-- [Follow us on X](https://twitter.com/nxdevtools) or [LinkedIn](https://www.linkedin.com/company/nrwl)
-- [Our Youtube channel](https://www.youtube.com/@nxdevtools)
-- [Our blog](https://nx.dev/blog?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
+- Auth: `/auth/register`, `/auth/login`, `/auth/logout`, `/auth/forgot-password`, `/auth/reset-password`, `/auth/oauth/:provider/start`, `/auth/oauth/:provider/callback`
+- Upload: `/uploads/presign`, `/uploads/complete`
+- Kudos/Feed: `/kudos`, `/feed`, `/kudos/:id/reactions`, `/kudos/:id/comments`
+- Rewards: `/rewards`, `/rewards/:id/redeem`
+- Notifications: `/notifications`, `/notifications/read`, websocket `/notifications/stream`

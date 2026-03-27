@@ -1,16 +1,35 @@
 import { render } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { BrowserRouter } from 'react-router-dom';
+import { vi } from 'vitest';
 
 import App from './app';
+import { AuthProvider } from './context/AuthContext';
 
 describe('App', () => {
+  beforeEach(() => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => ({
+        ok: false,
+        status: 401,
+        json: async () => ({ error: 'Unauthorized' }),
+      }))
+    );
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
   const renderApp = () =>
     render(
       <QueryClientProvider client={new QueryClient()}>
-        <BrowserRouter>
-          <App />
-        </BrowserRouter>
+        <AuthProvider>
+          <BrowserRouter>
+            <App />
+          </BrowserRouter>
+        </AuthProvider>
       </QueryClientProvider>
     );
 
@@ -19,12 +38,8 @@ describe('App', () => {
     expect(baseElement).toBeTruthy();
   });
 
-  it('should show stack overview title', () => {
-    const { getByText } = renderApp();
-    expect(
-      getByText(
-        /Web app scaffold is ready with React, Tailwind, and React Query/gi
-      )
-    ).toBeTruthy();
+  it('should show login page when unauthenticated', async () => {
+    const { findByText } = renderApp();
+    expect(await findByText(/login/gi)).toBeTruthy();
   });
 });

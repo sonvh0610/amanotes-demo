@@ -2,7 +2,13 @@
   "name": "@org/source",
   "version": "0.0.0",
   "license": "MIT",
-  "scripts": {},
+  "scripts": {
+    "dev:web": "npm exec nx run @org/web:dev",
+    "dev:api": "npm exec nx run @org/api:serve",
+    "migrate": "npm exec nx run @org/api:migrate",
+    "typecheck": "npm exec nx run-many -t typecheck",
+    "build": "npm exec nx run-many -t build"
+  },
   "private": true,
   "devDependencies": {
     "@nx/esbuild": "22.6.1",
@@ -20,8 +26,10 @@
     "@testing-library/dom": "10.4.0",
     "@testing-library/react": "16.3.0",
     "@types/node": "20.19.9",
+    "@types/pg": "^8.20.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
+    "@types/ws": "^8.18.1",
     "@vitejs/plugin-react": "^4.2.0",
     "@vitest/coverage-v8": "^1.6.1",
     "@vitest/ui": "^1.6.1",
@@ -35,6 +43,7 @@
     "prettier": "^2.6.2",
     "tailwindcss": "^4.2.2",
     "tslib": "^2.3.0",
+    "tsx": "^4.21.0",
     "typescript": "~5.9.2",
     "vite": "^5.4.19",
     "vitest": "^1.6.1"
@@ -44,13 +53,32 @@
     "apps/*"
   ],
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1019.0",
+    "@aws-sdk/s3-request-presigner": "^3.1019.0",
     "@fastify/autoload": "~6.0.3",
+    "@fastify/cookie": "^11.0.2",
+    "@fastify/cors": "^11.2.0",
+    "@fastify/rate-limit": "^10.3.0",
     "@fastify/sensible": "~6.0.2",
+    "@fastify/websocket": "^11.2.0",
+    "bcryptjs": "^3.0.3",
+    "better-auth": "^1.5.6",
+    "bullmq": "^5.71.1",
+    "dotenv": "^17.3.1",
+    "drizzle-kit": "^0.31.10",
+    "drizzle-orm": "^0.45.2",
     "fastify-plugin": "~5.0.1",
     "framer-motion": "^12.38.0",
+    "ioredis": "^5.10.1",
+    "jose": "^6.2.2",
     "lucide-react": "^1.7.0",
+    "mime-types": "^3.0.2",
+    "pg": "^8.20.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "react-router-dom": "6.30.3"
+    "react-router-dom": "6.30.3",
+    "uuid": "^13.0.0",
+    "ws": "^8.20.0",
+    "zod": "^4.3.6"
   }
 }

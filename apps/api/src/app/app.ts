@@ -23,5 +23,6 @@ export async function app(fastify: FastifyInstance, opts: AppOptions) {
   fastify.register(AutoLoad, {
     dir: path.join(__dirname, 'routes'),
     options: { ...opts },
+    dirNameRoutePrefix: true,
   });
 }

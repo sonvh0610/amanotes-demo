@@ -94,6 +94,13 @@
             "buildTarget": "@org/api:build:production"
           }
         }
+      },
+      "migrate": {
+        "executor": "nx:run-commands",
+        "options": {
+          "cwd": "apps/api",
+          "command": "tsx src/app/db/migrate.ts"
+        }
       }
     }
   },

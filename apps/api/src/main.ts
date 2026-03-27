@@ -1,13 +1,21 @@
+import 'dotenv/config';
 import Fastify from 'fastify';
 import { app } from './app/app';
+import { getEnv } from './app/config/env.js';
+import { startMediaWorker } from './app/workers/media.worker.js';
+import { pgPool } from './app/db/client.js';
+import { redis, redisSubscriber } from './app/lib/redis.js';
 
-const host = process.env.HOST ?? 'localhost';
-const port = process.env.PORT ? Number(process.env.PORT) : 3000;
+const env = getEnv();
+const host = env.HOST;
+const port = env.PORT;
 
 // Instantiate Fastify with some config
 const server = Fastify({
   logger: true,
 });
+
+const mediaWorker = startMediaWorker();
 
 // Register your application as a normal plugin.
 server.register(app);
@@ -20,4 +28,20 @@ server.listen({ port, host }, (err) => {
   } else {
     console.log(`[ ready ] http://${host}:${port}`);
   }
+});
+
+async function shutdown() {
+  await server.close();
+  await mediaWorker.close();
+  await redis.quit();
+  await redisSubscriber.quit();
+  await pgPool.end();
+  process.exit(0);
+}
+
+process.on('SIGTERM', () => {
+  void shutdown();
+});
+process.on('SIGINT', () => {
+  void shutdown();
 });

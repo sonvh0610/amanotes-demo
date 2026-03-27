@@ -3,6 +3,7 @@ import { Route, Routes } from 'react-router-dom';
 import { Login } from './pages/Login';
 import { Register } from './pages/Register';
 import { GlobalShell } from './components/layout/shell/GlobalShell';
+import { ProtectedRoute } from './components/common/ProtectedRoute';
 
 import Dashboard from './pages/Dashboard';
 import AdminOverview from './pages/AdminOverview';
@@ -21,13 +22,15 @@ function Home() {
 export function App() {
   return (
     <Routes>
-      <Route element={<GlobalShell />}>
-        <Route path="/" element={<Home />} />
-        <Route path="/send-kudos" element={<SendKudos />} />
-        <Route path="/notifications" element={<Notifications />} />
-        <Route path="/feed" element={<KudoFeed />} />
-        <Route path="/rewards" element={<RewardsCatalog />} />
-        <Route path="/wallet" element={<MyWallet />} />
+      <Route element={<ProtectedRoute />}>
+        <Route element={<GlobalShell />}>
+          <Route path="/" element={<Home />} />
+          <Route path="/send-kudos" element={<SendKudos />} />
+          <Route path="/notifications" element={<Notifications />} />
+          <Route path="/feed" element={<KudoFeed />} />
+          <Route path="/rewards" element={<RewardsCatalog />} />
+          <Route path="/wallet" element={<MyWallet />} />
+        </Route>
       </Route>
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
