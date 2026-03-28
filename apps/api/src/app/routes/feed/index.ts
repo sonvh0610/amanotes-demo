@@ -5,6 +5,7 @@ import { db } from '../../db/client.js';
 import {
   commentMediaAssets,
   comments,
+  kudoTaggedUsers,
   kudoWatchers,
   kudoMediaAssets,
   kudos,
@@ -50,7 +51,7 @@ export default async function feedRoutes(fastify: FastifyInstance) {
       receiverId: string;
       points: number;
       description: string;
-      coreValue: string | null;
+      coreValue: string;
       mediaAssetId: string | null;
       mediaUrl: string | null;
       mediaStorageKey: string | null;
@@ -63,6 +64,7 @@ export default async function feedRoutes(fastify: FastifyInstance) {
     recentLimit = 3
   ) => {
     const kudoIds = rows.map((item) => item.id);
+    const receiverIds = Array.from(new Set(rows.map((item) => item.receiverId)));
 
     const [
       mediaRows,
@@ -72,9 +74,11 @@ export default async function feedRoutes(fastify: FastifyInstance) {
       recentReactions,
       recentComments,
       watchedRows,
+      receiverRows,
+      taggedUserRows,
     ] =
       kudoIds.length === 0
-        ? [[], [], [], [], [], [], []]
+        ? [[], [], [], [], [], [], [], [], []]
         : await Promise.all([
             db
               .select({
@@ -158,6 +162,24 @@ export default async function feedRoutes(fastify: FastifyInstance) {
                   eq(kudoWatchers.userId, viewerUserId)
                 )
               ),
+            db
+              .select({
+                id: users.id,
+                displayName: users.displayName,
+              })
+              .from(users)
+              .where(inArray(users.id, receiverIds)),
+            db
+              .select({
+                kudoId: kudoTaggedUsers.kudoId,
+                id: users.id,
+                displayName: users.displayName,
+                email: users.email,
+                avatarUrl: users.avatarUrl,
+              })
+              .from(kudoTaggedUsers)
+              .innerJoin(users, eq(kudoTaggedUsers.userId, users.id))
+              .where(inArray(kudoTaggedUsers.kudoId, kudoIds)),
           ]);
 
     const allStorageKeys = Array.from(
@@ -219,6 +241,28 @@ export default async function feedRoutes(fastify: FastifyInstance) {
     }
 
     const watchedKudoIds = new Set(watchedRows.map((row) => row.kudoId));
+    const receiverNameById = new Map(
+      receiverRows.map((row) => [row.id, row.displayName])
+    );
+    const taggedUsersByKudoId = new Map<
+      string,
+      {
+        id: string;
+        displayName: string;
+        email: string;
+        avatarUrl: string | null;
+      }[]
+    >();
+    for (const row of taggedUserRows) {
+      const list = taggedUsersByKudoId.get(row.kudoId) ?? [];
+      list.push({
+        id: row.id,
+        displayName: row.displayName,
+        email: row.email,
+        avatarUrl: row.avatarUrl,
+      });
+      taggedUsersByKudoId.set(row.kudoId, list);
+    }
 
     const recentReactionsByKudoId = new Map<
       string,
@@ -333,6 +377,7 @@ export default async function feedRoutes(fastify: FastifyInstance) {
 
     return rows.map((item) => ({
       ...item,
+      receiverName: receiverNameById.get(item.receiverId) ?? 'Teammate',
       medias:
         mediasByKudoId.get(item.id) ??
         (item.mediaAssetId && item.mediaType
@@ -353,6 +398,7 @@ export default async function feedRoutes(fastify: FastifyInstance) {
         recentReactions: recentReactionsByKudoId.get(item.id) ?? [],
         recentComments: recentCommentsByKudoId.get(item.id) ?? [],
       },
+      taggedUsers: taggedUsersByKudoId.get(item.id) ?? [],
       watchedByViewer: watchedKudoIds.has(item.id),
     }));
   };

@@ -4,6 +4,14 @@ import { KudoTaggedText } from '../features/kudos/components/KudoTaggedText';
 import { useKudoTagSuggestions } from '../features/kudos/hooks/useKudoTagSuggestions';
 import { useSendKudosForm } from '../features/kudos/hooks/useSendKudosForm';
 
+const CORE_VALUES = [
+  'Teamwork',
+  'Ownership',
+  'Craft Excellence',
+  'Customer Focus',
+  'Growth Mindset',
+];
+
 export default function SendKudos() {
   const {
     users,
@@ -12,8 +20,12 @@ export default function SendKudos() {
     receiver,
     points,
     setSafePoints,
+    coreValue,
+    setCoreValue,
     description,
     setDescription,
+    taggedUserIds,
+    setTaggedUserIds,
     mediaFiles,
     setMediaFiles,
     loading,
@@ -86,32 +98,78 @@ export default function SendKudos() {
             </div>
           </div>
 
-          <div className="rounded-2xl bg-surface-container-low p-4">
-            <label className="block text-xs font-bold uppercase tracking-wider text-on-surface-variant">
-              Points
-            </label>
-            <div className="mt-3 flex items-center gap-3">
-              <input
-                className="w-28 rounded-xl border border-surface-container bg-white px-3 py-2 text-base font-bold text-on-surface"
-                min={10}
-                max={50}
-                step={5}
-                type="number"
-                value={points}
-                onChange={(e) => {
-                  const value = Number(e.target.value);
-                  setSafePoints(value);
-                }}
-              />
-              <span className="text-sm font-semibold text-primary">
-                10-50 per kudo
-              </span>
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <div className="rounded-2xl bg-surface-container-low p-4">
+              <label className="block text-xs font-bold uppercase tracking-wider text-on-surface-variant">
+                Points
+              </label>
+              <div className="mt-3 flex items-center gap-3">
+                <input
+                  className="w-28 rounded-xl border border-surface-container bg-white px-3 py-2 text-base font-bold text-on-surface"
+                  min={10}
+                  max={50}
+                  step={5}
+                  type="number"
+                  value={points}
+                  onChange={(e) => {
+                    const value = Number(e.target.value);
+                    setSafePoints(value);
+                  }}
+                />
+                <span className="text-sm font-semibold text-primary">
+                  10-50 per kudo
+                </span>
+              </div>
+              <p className="mt-2 text-xs text-on-surface-variant">
+                Monthly giving wallet is capped at 200 points and resets every UTC
+                month.
+              </p>
             </div>
-            <p className="mt-2 text-xs text-on-surface-variant">
-              Monthly giving wallet is capped at 200 points and resets every UTC
-              month.
-            </p>
+
+            <label className="space-y-2 rounded-2xl bg-surface-container-low p-4">
+              <span className="text-xs font-bold uppercase tracking-wider text-on-surface-variant">
+                Core Value
+              </span>
+              <select
+                className="w-full rounded-xl border border-surface-container bg-white px-3 py-3 text-on-surface"
+                value={coreValue}
+                onChange={(event) => setCoreValue(event.target.value)}
+                required
+              >
+                {CORE_VALUES.map((item) => (
+                  <option key={item} value={item}>
+                    {item}
+                  </option>
+                ))}
+              </select>
+            </label>
           </div>
+
+          <label className="space-y-2">
+          <span className="text-xs font-bold uppercase tracking-wider text-on-surface-variant">
+            Tagged Teammates
+          </span>
+          <select
+            className="min-h-32 w-full rounded-xl border border-surface-container bg-white px-3 py-3 text-on-surface"
+            multiple
+            value={taggedUserIds}
+            onChange={(event) => {
+              const values = Array.from(event.target.selectedOptions, (option) => option.value);
+              setTaggedUserIds(values);
+            }}
+          >
+            {users
+              .filter((item) => item.id !== receiverId)
+              .map((item) => (
+                <option key={item.id} value={item.id}>
+                  {item.displayName} ({item.email})
+                </option>
+              ))}
+          </select>
+          <p className="text-xs text-on-surface-variant">
+            Hold command/control to select multiple teammates for real-time notifications.
+          </p>
+          </label>
 
           <div className="space-y-3">
             <label className="text-xs font-bold uppercase tracking-wider text-on-surface-variant">

@@ -56,6 +56,15 @@ Set these in repository settings before enabling production CD:
    - `SESSION_COOKIE_NAME`
    - `SESSION_TTL_HOURS`
    - `JWT_SECRET`
+   - `CSRF_COOKIE_NAME`
+   - `CSRF_HEADER_NAME`
+   - `OIDC_ISSUER_URL`
+   - `OIDC_CLIENT_ID`
+   - `OIDC_CLIENT_SECRET`
+   - `OIDC_REDIRECT_URI`
+   - `OIDC_SCOPES`
+   - `OPENAI_API_KEY`
+   - `OPENAI_MODEL`
    - `S3_ENDPOINT` (optional if using AWS S3 directly)
    - `S3_REGION`
    - `S3_ACCESS_KEY_ID`
@@ -79,6 +88,10 @@ The CD workflow runs this sequence on the server:
 7. `docker image prune -f`
 8. `npm exec nx run @org/web:build` with `VITE_API_BASE_URL=/api`, optionally set `VITE_WS_BASE_URL` to a websocket-capable public API origin, copy `apps/web/dist` into `.vercel/output/static`, add Vercel route `/api/* -> http://$PROD_SSH_HOST/*`, then `npx vercel deploy --prebuilt --prod --public --yes --token="$VERCEL_TOKEN"`
 
+Important OIDC production note:
+
+- When the web app is deployed on Vercel behind the `/api` rewrite, set `OIDC_REDIRECT_URI` to `https://<your-web-domain>/api/auth/oidc/callback` so the identity provider returns to the same-origin API route used by the browser session.
+
 Note: the Vercel `/api/*` rewrite is suitable for HTTP requests, but websocket upgrades may not survive that hop. If `VITE_WS_BASE_URL` is not set, the web app will fall back to polling for notification-driven refreshes.
 
 ## Smoke Checks After Deploy
@@ -96,6 +109,8 @@ Then verify application flows:
 2. Send kudos (10-50 points).
 3. React/comment update in feed.
 4. Redeem reward with idempotency key.
+5. OIDC login returns to the app and session persists.
+6. AI monthly summary loads on dashboard and wallet.
 
 ## Rollback
 

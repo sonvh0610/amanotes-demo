@@ -3,11 +3,11 @@
   "version": "0.0.0",
   "license": "MIT",
   "scripts": {
-    "dev:web": "npm exec nx run @org/web:dev",
-    "dev:api": "npm exec nx run @org/api:serve",
-    "migrate": "npm exec nx run @org/api:migrate",
-    "typecheck": "npm exec nx run-many -t typecheck",
-    "build": "npm exec nx run-many -t build"
+    "dev:web": "npm exec -- nx run @org/web:dev",
+    "dev:api": "npm exec -- nx run @org/api:serve",
+    "migrate": "npm exec -- nx run @org/api:migrate",
+    "typecheck": "npm exec -- nx run-many -t typecheck",
+    "build": "npm exec -- nx run-many -t build"
   },
   "private": true,
   "devDependencies": {

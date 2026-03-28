@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import type { FeedResponse } from '@org/shared';
+import type { FeedResponse, MonthlySummaryResponse } from '@org/shared';
 import { AppIcon } from '../components/ui/AppIcon';
 import { TopRecognizersLeaderboard } from '../features/kudos/components/TopRecognizersLeaderboard';
 import { useTopRecognizers } from '../features/kudos/hooks/useTopRecognizers';
@@ -40,6 +40,7 @@ export default function Dashboard() {
   } = useTopRecognizers(5);
   const [wallet, setWallet] = useState<WalletResponse['wallet'] | null>(null);
   const [recentFeed, setRecentFeed] = useState<FeedPreviewItem[]>([]);
+  const [summary, setSummary] = useState<MonthlySummaryResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const firstName =
@@ -57,6 +58,10 @@ export default function Dashboard() {
         ]);
         setWallet(walletRes.wallet ?? null);
         setRecentFeed(Array.isArray(feedRes.items) ? feedRes.items : []);
+        const summaryRes = await apiRequest<MonthlySummaryResponse>(
+          '/ai/monthly-summary'
+        );
+        setSummary(summaryRes);
       } catch (requestError) {
         setError(
           getUserFacingError(requestError, {
@@ -235,6 +240,27 @@ export default function Dashboard() {
                 </p>
               ) : null}
             </div>
+          </section>
+
+          <section className="md:col-span-8 rounded-xl bg-surface-container-lowest p-6 shadow-[0_12px_40px_rgba(55,39,77,0.06)]">
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <h3 className="text-lg font-bold text-on-surface">AI Achievement Summary</h3>
+                <p className="mt-1 text-sm text-on-surface-variant">
+                  Snapshot for {summary?.monthKey ?? wallet?.givingWallet.monthKey ?? 'this month'}
+                </p>
+              </div>
+              <Link
+                to="/wallet"
+                className="text-sm font-bold text-primary hover:underline"
+              >
+                Open Wallet
+              </Link>
+            </div>
+            <p className="mt-4 text-sm leading-7 text-on-surface">
+              {summary?.summary ??
+                'Your AI monthly achievement summary will appear here once enough recognition data is available.'}
+            </p>
           </section>
 
           <TopRecognizersLeaderboard

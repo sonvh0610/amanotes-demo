@@ -16,6 +16,14 @@ export interface SessionResult {
   expiresAt: Date;
 }
 
+export interface AuthUserRecord {
+  id: string;
+  email: string;
+  displayName: string;
+  avatarUrl: string | null;
+  role: 'member' | 'admin';
+}
+
 export async function createSession(userId: string): Promise<SessionResult> {
   const sessionToken = makeToken(32);
   const tokenHash = hashToken(sessionToken);
@@ -32,7 +40,9 @@ export async function createSession(userId: string): Promise<SessionResult> {
   return { sessionToken, expiresAt };
 }
 
-export async function findSessionUser(sessionToken: string) {
+export async function findSessionUser(
+  sessionToken: string
+): Promise<AuthUserRecord | null> {
   const tokenHash = hashToken(sessionToken);
 
   const rows = await db
@@ -60,8 +70,12 @@ export async function destroySession(sessionToken: string): Promise<void> {
   await db.delete(sessions).where(eq(sessions.tokenHash, hashToken(sessionToken)));
 }
 
+export async function destroyUserSessions(userId: string): Promise<void> {
+  await db.delete(sessions).where(eq(sessions.userId, userId));
+}
+
 export async function upsertOauthAccount(input: {
-  provider: 'google' | 'slack';
+  provider: 'google' | 'slack' | 'oidc';
   providerAccountId: string;
   email?: string;
   displayName?: string;

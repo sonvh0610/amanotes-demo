@@ -1,20 +1,33 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import type { AuthProvidersResponse } from '@org/shared';
 import { apiRequest } from '../lib/api';
 import { GoodJobLogo } from '../components/ui/GoodJobLogo';
 import { getUserFacingError } from '../lib/user-errors';
 
 export function Login() {
   const [error, setError] = useState<string | null>(null);
+  const [providers, setProviders] = useState<AuthProvidersResponse['providers']>([]);
   const [loadingProvider, setLoadingProvider] = useState<
-    'google' | 'slack' | null
+    'oidc' | 'google' | 'slack' | null
   >(null);
 
-  const startOauth = async (provider: 'google' | 'slack') => {
+  useEffect(() => {
+    void (async () => {
+      const response = await apiRequest<AuthProvidersResponse>('/auth/providers');
+      setProviders(response.providers);
+    })().catch(() => {
+      setProviders(['oidc', 'google', 'slack']);
+    });
+  }, []);
+
+  const startOauth = async (provider: 'oidc' | 'google' | 'slack') => {
     setError(null);
     setLoadingProvider(provider);
     try {
       const data = await apiRequest<{ url: string }>(
-        `/auth/oauth/${provider}/start`
+        provider === 'oidc'
+          ? '/auth/oidc/start'
+          : `/auth/oauth/${provider}/start`
       );
       window.location.href = data.url;
     } catch (requestError) {
@@ -53,40 +66,60 @@ export function Login() {
               Continue With
             </p>
             <div className="mt-5 space-y-3">
-              <button
-                className="flex w-full items-center justify-between rounded-2xl border border-secondary-fixed/40 bg-secondary px-4 py-3 text-sm font-semibold text-on-secondary shadow-sm transition hover:-translate-y-0.5 hover:bg-secondary-fixed hover:shadow disabled:opacity-60"
-                disabled={loadingProvider !== null}
-                onClick={() => void startOauth('google')}
-                type="button"
-              >
-                <span className="inline-flex items-center gap-2">
-                  <img
-                    alt=""
-                    aria-hidden="true"
-                    className="h-5 w-5"
-                    src="/google-icon.svg"
-                  />
-                  Continue with Google
-                </span>
-                <span aria-hidden="true">→</span>
-              </button>
-              <button
-                className="flex w-full items-center justify-between rounded-2xl border border-secondary-fixed/40 bg-secondary px-4 py-3 text-sm font-semibold text-on-secondary shadow-sm transition hover:-translate-y-0.5 hover:bg-secondary-fixed hover:shadow disabled:opacity-60"
-                disabled={loadingProvider !== null}
-                onClick={() => void startOauth('slack')}
-                type="button"
-              >
-                <span className="inline-flex items-center gap-2">
-                  <img
-                    alt=""
-                    aria-hidden="true"
-                    className="h-5 w-5"
-                    src="/slack-icon.svg"
-                  />
-                  Continue with Slack
-                </span>
-                <span aria-hidden="true">→</span>
-              </button>
+              {providers.includes('oidc') ? (
+                <button
+                  className="flex w-full items-center justify-between rounded-2xl bg-primary px-4 py-3 text-sm font-semibold text-on-primary shadow-sm transition hover:-translate-y-0.5 hover:bg-primary-dim hover:shadow disabled:opacity-60"
+                  disabled={loadingProvider !== null}
+                  onClick={() => void startOauth('oidc')}
+                  type="button"
+                >
+                  <span className="inline-flex items-center gap-2">
+                    <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-white/20 text-[11px] font-bold">
+                      SSO
+                    </span>
+                    Continue with Work SSO
+                  </span>
+                  <span aria-hidden="true">→</span>
+                </button>
+              ) : null}
+              {providers.includes('google') ? (
+                <button
+                  className="flex w-full items-center justify-between rounded-2xl border border-secondary-fixed/40 bg-secondary px-4 py-3 text-sm font-semibold text-on-secondary shadow-sm transition hover:-translate-y-0.5 hover:bg-secondary-fixed hover:shadow disabled:opacity-60"
+                  disabled={loadingProvider !== null}
+                  onClick={() => void startOauth('google')}
+                  type="button"
+                >
+                  <span className="inline-flex items-center gap-2">
+                    <img
+                      alt=""
+                      aria-hidden="true"
+                      className="h-5 w-5"
+                      src="/google-icon.svg"
+                    />
+                    Continue with Google
+                  </span>
+                  <span aria-hidden="true">→</span>
+                </button>
+              ) : null}
+              {providers.includes('slack') ? (
+                <button
+                  className="flex w-full items-center justify-between rounded-2xl border border-secondary-fixed/40 bg-secondary px-4 py-3 text-sm font-semibold text-on-secondary shadow-sm transition hover:-translate-y-0.5 hover:bg-secondary-fixed hover:shadow disabled:opacity-60"
+                  disabled={loadingProvider !== null}
+                  onClick={() => void startOauth('slack')}
+                  type="button"
+                >
+                  <span className="inline-flex items-center gap-2">
+                    <img
+                      alt=""
+                      aria-hidden="true"
+                      className="h-5 w-5"
+                      src="/slack-icon.svg"
+                    />
+                    Continue with Slack
+                  </span>
+                  <span aria-hidden="true">→</span>
+                </button>
+              ) : null}
             </div>
             {loadingProvider ? (
               <p className="mt-3 text-xs text-on-surface-variant">

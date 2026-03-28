@@ -53,6 +53,7 @@ vitest.config.*.timestamp*
 .env
 .env.*
 !.env.example
+.vercel
 *.pem
 *.key
 *.p12

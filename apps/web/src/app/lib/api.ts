@@ -1,5 +1,9 @@
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL?.toString() ?? '';
 const WS_BASE_URL = import.meta.env.VITE_WS_BASE_URL?.toString() ?? '';
+const MUTATING_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
+
+let csrfTokenCache: string | null = null;
+let csrfTokenPromise: Promise<string | null> | null = null;
 
 export function apiUrl(path: string): string {
   return `${API_BASE_URL}${path}`;
@@ -8,6 +12,39 @@ export function apiUrl(path: string): string {
 type RequestOptions = Omit<RequestInit, 'body'> & {
   body?: unknown;
 };
+
+function normalizeMethod(method?: string) {
+  return (method ?? 'GET').toUpperCase();
+}
+
+export function primeCsrfToken(token: string | null | undefined) {
+  csrfTokenCache = token && token.trim().length > 0 ? token : null;
+}
+
+async function getCsrfToken(): Promise<string | null> {
+  if (csrfTokenCache) {
+    return csrfTokenCache;
+  }
+  if (!csrfTokenPromise) {
+    csrfTokenPromise = fetch(apiUrl('/auth/csrf'), {
+      credentials: 'include',
+    })
+      .then(async (response) => {
+        if (!response.ok) {
+          return null;
+        }
+        const payload = (await response.json()) as { csrfToken?: string };
+        const token = payload.csrfToken?.trim() || null;
+        csrfTokenCache = token;
+        return token;
+      })
+      .finally(() => {
+        csrfTokenPromise = null;
+      });
+  }
+
+  return csrfTokenPromise;
+}
 
 function toReadableError(
   value: unknown,
@@ -94,14 +131,18 @@ export async function apiRequest<T>(
 ): Promise<T> {
   const { body, headers, ...rest } = options;
   const hasBody = body !== undefined;
+  const method = normalizeMethod(rest.method);
+  const csrfToken = MUTATING_METHODS.has(method) ? await getCsrfToken() : null;
 
   const response = await fetch(apiUrl(path), {
     credentials: 'include',
     headers: {
       ...(hasBody ? { 'content-type': 'application/json' } : {}),
+      ...(csrfToken ? { 'x-csrf-token': csrfToken } : {}),
       ...headers,
     },
     body: hasBody ? JSON.stringify(body) : undefined,
+    method,
     ...rest,
   });
 

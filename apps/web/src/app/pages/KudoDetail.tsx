@@ -174,11 +174,24 @@ export default function KudoDetail() {
                 </p>
                 <h2 className="mt-1 text-lg font-bold text-on-surface">
                   {item.senderName} sent <span className="text-primary">{item.points}</span>{' '}
-                  points
+                  points to {item.receiverName}
                 </h2>
+                <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
+                  <span className="rounded-full bg-primary-container px-2 py-1 font-semibold text-on-primary-container">
+                    {item.coreValue}
+                  </span>
+                  {item.taggedUsers.map((taggedUser) => (
+                    <span
+                      key={taggedUser.id}
+                      className="rounded-full bg-surface-container px-2 py-1 font-medium text-on-surface-variant"
+                    >
+                      @{taggedUser.displayName}
+                    </span>
+                  ))}
+                </div>
                 <KudoTaggedText
                   text={item.description}
-                  className="mt-2 flex flex-wrap items-center gap-1 text-on-surface"
+                  className="mt-3 flex flex-wrap items-center gap-1 text-on-surface"
                 />
               </div>
               <div className="relative">

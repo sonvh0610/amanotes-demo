@@ -60,6 +60,13 @@ export default async function uploadRoutes(fastify: FastifyInstance) {
         const uploadUrl = await createPresignedUploadUrl({
           key,
           mimeType: parsed.data.mimeType,
+          metadata:
+            parsed.data.mediaType === 'video' &&
+            typeof parsed.data.durationSeconds === 'number'
+              ? {
+                  'duration-seconds': String(parsed.data.durationSeconds),
+                }
+              : undefined,
         });
 
         const inserted = await db
@@ -94,7 +101,6 @@ export default async function uploadRoutes(fastify: FastifyInstance) {
     async (request, reply) => {
       const body = request.body as {
         mediaAssetId?: string;
-        durationSeconds?: number;
       };
       const parsedId = uuidSchema.safeParse(body.mediaAssetId);
       if (!parsedId.success) {
@@ -115,10 +121,6 @@ export default async function uploadRoutes(fastify: FastifyInstance) {
         'validate',
         {
           mediaAssetId: media.id,
-          durationSeconds:
-            typeof body.durationSeconds === 'number'
-              ? body.durationSeconds
-              : undefined,
         },
         { attempts: 3, removeOnComplete: true }
       );

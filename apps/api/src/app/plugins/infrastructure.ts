@@ -27,6 +27,37 @@ export default fp(async function infrastructurePlugin(fastify) {
 
   await startRealtimeSubscriber();
 
+  fastify.addHook('preHandler', async (request, reply) => {
+    const method = request.method.toUpperCase();
+    const isMutating = ['POST', 'PUT', 'PATCH', 'DELETE'].includes(method);
+    if (!isMutating) {
+      return;
+    }
+
+    const routeUrl = request.routeOptions.url ?? '';
+    const isOauthCallback =
+      routeUrl.includes('/auth/oauth/:provider/callback') ||
+      routeUrl.includes('/auth/oidc/callback');
+    const isWebsocket = routeUrl.includes('/notifications/stream');
+    if (isOauthCallback || isWebsocket) {
+      return;
+    }
+
+    const sessionToken = request.cookies[env.SESSION_COOKIE_NAME];
+    if (!sessionToken) {
+      return;
+    }
+
+    const csrfCookie = request.cookies[env.CSRF_COOKIE_NAME];
+    const csrfHeader = request.headers[env.CSRF_HEADER_NAME] as
+      | string
+      | undefined;
+
+    if (!csrfCookie || !csrfHeader || csrfCookie !== csrfHeader) {
+      return reply.status(403).send({ error: 'Invalid CSRF token' });
+    }
+  });
+
   fastify.decorate(
     'requireAuth',
     async (request: FastifyRequest, reply: FastifyReply) => {

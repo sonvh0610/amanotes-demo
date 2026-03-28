@@ -11,7 +11,9 @@ export function useSendKudosForm() {
   const [users, setUsers] = useState<KudoUserOption[]>([]);
   const [receiverId, setReceiverId] = useState('');
   const [points, setPoints] = useState(25);
+  const [coreValue, setCoreValue] = useState('Teamwork');
   const [description, setDescription] = useState('');
+  const [taggedUserIds, setTaggedUserIds] = useState<string[]>([]);
   const [mediaFiles, setMediaFiles] = useState<File[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -50,7 +52,9 @@ export function useSendKudosForm() {
       await sendKudo({
         receiverId,
         points,
+        coreValue,
         description,
+        taggedUserIds: taggedUserIds.length > 0 ? taggedUserIds : undefined,
         mediaAssetIds,
       });
       const tags = extractUniqueTags(description);
@@ -79,8 +83,12 @@ export function useSendKudosForm() {
     receiver,
     points,
     setSafePoints,
+    coreValue,
+    setCoreValue,
     description,
     setDescription,
+    taggedUserIds,
+    setTaggedUserIds,
     mediaFiles,
     setMediaFiles,
     loading,

@@ -63,7 +63,9 @@ export default async function notificationRoutes(fastify: FastifyInstance) {
         items
           .filter(
             (item) =>
-              item.type === 'kudo_received' || item.type === 'kudo_commented'
+              item.type === 'kudo_received' ||
+              item.type === 'kudo_tagged' ||
+              item.type === 'kudo_commented'
           )
           .map((item) =>
             item.type === 'kudo_commented'
@@ -113,6 +115,24 @@ export default async function notificationRoutes(fastify: FastifyInstance) {
       }
 
       if (item.type === 'kudo_received') {
+        const senderId =
+          typeof item.payloadJson.senderId === 'string'
+            ? item.payloadJson.senderId
+            : null;
+        const senderName = senderId ? actorNamesById.get(senderId) : null;
+        if (!senderName) {
+          return item;
+        }
+        return {
+          ...item,
+          payloadJson: {
+            ...item.payloadJson,
+            senderName,
+          },
+        };
+      }
+
+      if (item.type === 'kudo_tagged') {
         const senderId =
           typeof item.payloadJson.senderId === 'string'
             ? item.payloadJson.senderId

@@ -15,6 +15,7 @@ export async function app(fastify: FastifyInstance, opts: AppOptions) {
   // through your application
   fastify.register(AutoLoad, {
     dir: path.join(__dirname, 'plugins'),
+    forceESM: true,
     options: { ...opts },
   });
 
@@ -22,6 +23,7 @@ export async function app(fastify: FastifyInstance, opts: AppOptions) {
   // define your routes in one of these
   fastify.register(AutoLoad, {
     dir: path.join(__dirname, 'routes'),
+    forceESM: true,
     options: { ...opts },
     dirNameRoutePrefix: true,
   });

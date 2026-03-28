@@ -11,6 +11,7 @@ import {
   commentMediaAssets,
   comments,
   feedEvents,
+  kudoTaggedUsers,
   kudoWatchers,
   kudoMediaAssets,
   kudos,
@@ -48,6 +49,30 @@ export default async function kudosRoutes(fastify: FastifyInstance) {
       });
       if (!receiver) {
         return reply.status(404).send({ error: 'Receiver not found' });
+      }
+
+      const taggedUserIds = Array.from(new Set(data.taggedUserIds ?? []));
+      if (taggedUserIds.includes(actor.id) || taggedUserIds.includes(data.receiverId)) {
+        return reply
+          .status(400)
+          .send({ error: 'Tagged teammates cannot include sender or receiver' });
+      }
+
+      const taggedUsers =
+        taggedUserIds.length === 0
+          ? []
+          : await db
+              .select({
+                id: users.id,
+                displayName: users.displayName,
+                email: users.email,
+                avatarUrl: users.avatarUrl,
+              })
+              .from(users)
+              .where(inArray(users.id, taggedUserIds));
+
+      if (taggedUsers.length !== taggedUserIds.length) {
+        return reply.status(400).send({ error: 'Invalid tagged teammate selection' });
       }
 
       const requestedMediaIds = data.mediaAssetIds?.length
@@ -147,7 +172,7 @@ export default async function kudosRoutes(fastify: FastifyInstance) {
               receiverId: data.receiverId,
               points: data.points,
               description: data.description,
-              coreValue: 'Kudos',
+              coreValue: data.coreValue,
               mediaAssetId: validMediaIds[0] ?? null,
             })
             .returning();
@@ -177,6 +202,25 @@ export default async function kudosRoutes(fastify: FastifyInstance) {
               userId: data.receiverId,
             },
           ]).onConflictDoNothing();
+
+          if (taggedUserIds.length > 0) {
+            await tx.insert(kudoTaggedUsers).values(
+              taggedUserIds.map((userId) => ({
+                kudoId: kudo.id,
+                userId,
+              }))
+            );
+
+            await tx
+              .insert(kudoWatchers)
+              .values(
+                taggedUserIds.map((userId) => ({
+                  kudoId: kudo.id,
+                  userId,
+                }))
+              )
+              .onConflictDoNothing();
+          }
 
           await tx.insert(pointLedger).values([
             {
@@ -229,6 +273,7 @@ export default async function kudosRoutes(fastify: FastifyInstance) {
             payloadJson: {
               points: data.points,
               description: data.description,
+              coreValue: data.coreValue,
             },
           });
 
@@ -240,19 +285,20 @@ export default async function kudosRoutes(fastify: FastifyInstance) {
             })
             .where(eq(wallets.userId, data.receiverId));
 
-          const recipientIds = [data.receiverId];
+          const recipientIds = Array.from(
+            new Set([data.receiverId, ...taggedUserIds].filter((id) => id !== actor.id))
+          );
           await tx.insert(notifications).values(
-            recipientIds
-              .filter((id) => id !== actor.id)
-              .map((userId) => ({
+            recipientIds.map((userId) => ({
                 userId,
-                type: 'kudo_received',
+                type: userId === data.receiverId ? 'kudo_received' : 'kudo_tagged',
                 payloadJson: {
                   kudoId: kudo.id,
                   senderId: actor.id,
                   receiverId: data.receiverId,
                   points: data.points,
                   senderName: actor.displayName,
+                  coreValue: data.coreValue,
                 },
               }))
           );
@@ -284,9 +330,29 @@ export default async function kudosRoutes(fastify: FastifyInstance) {
           kudoId: result.id,
           points: data.points,
           senderName: actor.displayName,
+          coreValue: data.coreValue,
         },
         createdAt: new Date().toISOString(),
       });
+
+      const realtimeTaggedUserIds = Array.from(new Set(data.taggedUserIds ?? [])).filter(
+        (userId) => userId !== actor.id && userId !== data.receiverId
+      );
+      await Promise.all(
+        realtimeTaggedUserIds.map((userId) =>
+          fastify.publishEvent({
+            event: 'notification.new',
+            userId,
+            payload: {
+              type: 'kudo_tagged',
+              kudoId: result.id,
+              senderName: actor.displayName,
+              coreValue: data.coreValue,
+            },
+            createdAt: new Date().toISOString(),
+          })
+        )
+      );
 
       await fastify.publishEvent({
         event: 'wallet.points_received',
@@ -297,6 +363,21 @@ export default async function kudosRoutes(fastify: FastifyInstance) {
         },
         createdAt: new Date().toISOString(),
       });
+
+      await Promise.all(
+        Array.from(new Set([actor.id, data.receiverId, ...realtimeTaggedUserIds])).map(
+          (userId) =>
+            fastify.publishEvent({
+              event: 'ai.summary.invalidate',
+              userId,
+              payload: {
+                monthKey,
+                kudoId: result.id,
+              },
+              createdAt: new Date().toISOString(),
+            })
+        )
+      );
 
       return reply.status(201).send({ kudo: result });
     }

@@ -7,12 +7,15 @@ export const uploadPresignBodySchema = z.object({
   mimeType: z.string().min(1),
   fileSizeBytes: z.number().int().positive(),
   mediaType: z.enum(['image', 'video']),
+  durationSeconds: z.number().positive().max(180).optional(),
 });
 
 export const createKudoBodySchema = z.object({
   receiverId: uuidSchema,
   points: z.number().int().min(10).max(50),
   description: z.string().min(5).max(2000),
+  coreValue: z.string().trim().min(2).max(60),
+  taggedUserIds: z.array(uuidSchema).max(10).optional(),
   mediaAssetIds: z.array(uuidSchema).max(5).optional(),
   // backward-compatible legacy field
   mediaAssetId: uuidSchema.optional(),
@@ -23,6 +26,16 @@ export const createKudoBodySchema = z.object({
       message: 'Maximum 5 media files per kudo',
       path: ['mediaAssetIds'],
     });
+  }
+  if (value.taggedUserIds) {
+    const uniqueCount = new Set(value.taggedUserIds).size;
+    if (uniqueCount !== value.taggedUserIds.length) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Tagged teammates must be unique',
+        path: ['taggedUserIds'],
+      });
+    }
   }
 });
 
@@ -171,7 +184,15 @@ export interface FeedItem {
   receiverId: string;
   senderName: string;
   senderAvatarUrl: string | null;
+  receiverName: string;
   description: string;
+  coreValue: string;
+  taggedUsers: {
+    id: string;
+    displayName: string;
+    email: string;
+    avatarUrl?: string | null;
+  }[];
   points: number;
   medias: KudoMedia[];
   createdAt: string;
@@ -247,6 +268,25 @@ export interface NotificationItem {
   createdAt: string;
 }
 
+export interface AuthProvidersResponse {
+  providers: Array<'oidc' | 'google' | 'slack'>;
+}
+
+export interface AuthMeResponse {
+  user: {
+    id: string;
+    email: string;
+    displayName: string;
+    avatarUrl: string | null;
+    role: 'member' | 'admin';
+  };
+  csrfToken: string;
+}
+
+export interface CsrfTokenResponse {
+  csrfToken: string;
+}
+
 export interface NotificationsResponse {
   items: NotificationItem[];
   nextCursor: string | null;
@@ -270,12 +310,29 @@ export interface RewardsResponse {
   nextCursor: string | null;
 }
 
+export interface MonthlySummaryResponse {
+  monthKey: string;
+  summary: string;
+  generatedAt: string;
+  sourceStats: {
+    kudosSent: number;
+    kudosReceived: number;
+    pointsGiven: number;
+    pointsReceived: number;
+    rewardsRedeemed: number;
+    topCoreValues: { coreValue: string; count: number }[];
+    notableColleagues: { userId: string; displayName: string; count: number }[];
+  };
+  cached: boolean;
+}
+
 export type RealtimeEventType =
   | 'feed.new'
   | 'feed.reaction'
   | 'feed.comment'
   | 'notification.new'
-  | 'wallet.points_received';
+  | 'wallet.points_received'
+  | 'ai.summary.invalidate';
 
 export interface RealtimeEnvelope<TPayload = unknown> {
   event: RealtimeEventType;

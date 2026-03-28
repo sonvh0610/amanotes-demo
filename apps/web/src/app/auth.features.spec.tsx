@@ -87,14 +87,25 @@ describe('auth features', () => {
   });
 
   it('shows social-only login UI', async () => {
-    const fetchMock = vi.fn(async () => ({
-      ok: false,
-      status: 401,
-      json: async () => ({ error: 'Unauthorized' }),
-    }));
+    const fetchMock = vi.fn(async (input: RequestLike) => {
+      const url = input.toString();
+      if (url.endsWith('/auth/providers')) {
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({ providers: ['oidc', 'google', 'slack'] }),
+        };
+      }
+      return {
+        ok: false,
+        status: 401,
+        json: async () => ({ error: 'Unauthorized' }),
+      };
+    });
     vi.stubGlobal('fetch', fetchMock);
 
     const { findByText, queryByText } = renderAppAt('/login');
+    expect(await findByText(/work sso/i)).toBeTruthy();
     expect(await findByText(/google/i)).toBeTruthy();
     expect(queryByText(/forgot password/i)).toBeNull();
     expect(queryByText(/create account/i)).toBeNull();

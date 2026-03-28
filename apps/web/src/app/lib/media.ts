@@ -61,6 +61,7 @@ export async function uploadMedia(file: File): Promise<string> {
       mimeType: file.type || 'application/octet-stream',
       fileSizeBytes: file.size,
       mediaType,
+      durationSeconds,
     },
   });
 
@@ -79,7 +80,6 @@ export async function uploadMedia(file: File): Promise<string> {
     method: 'POST',
     body: {
       mediaAssetId: presign.mediaAsset.id,
-      durationSeconds,
     },
   });
 

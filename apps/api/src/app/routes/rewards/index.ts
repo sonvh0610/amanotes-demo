@@ -268,6 +268,15 @@ export default async function rewardRoutes(fastify: FastifyInstance) {
         createdAt: new Date().toISOString(),
       });
 
+      await fastify.publishEvent({
+        event: 'ai.summary.invalidate',
+        userId,
+        payload: {
+          redemptionId: redemption.id,
+        },
+        createdAt: new Date().toISOString(),
+      });
+
       return reply.status(201).send({ redemption });
     }
   );

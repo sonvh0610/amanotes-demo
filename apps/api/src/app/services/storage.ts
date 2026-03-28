@@ -3,6 +3,7 @@ import { randomUUID } from 'node:crypto';
 import {
   CreateBucketCommand,
   GetObjectCommand,
+  HeadObjectCommand,
   HeadBucketCommand,
   PutObjectCommand,
   S3Client,
@@ -77,6 +78,7 @@ export function makeStorageKey(userId: string, fileName: string) {
 export async function createPresignedUploadUrl(input: {
   key: string;
   mimeType: string;
+  metadata?: Record<string, string>;
 }) {
   await ensureBucketReady();
 
@@ -84,6 +86,7 @@ export async function createPresignedUploadUrl(input: {
     Bucket: env.S3_BUCKET,
     Key: input.key,
     ContentType: input.mimeType,
+    Metadata: input.metadata,
   });
   const url = await getSignedUrl(s3Client, cmd, {
     expiresIn: 900,
@@ -98,6 +101,18 @@ export async function createPresignedReadUrl(input: { key: string }) {
     Key: input.key,
   });
   return getSignedUrl(s3Client, cmd, { expiresIn: 3600 });
+}
+
+export async function getStoredObjectMetadata(input: { key: string }) {
+  await ensureBucketReady();
+  const response = await s3Client.send(
+    new HeadObjectCommand({
+      Bucket: env.S3_BUCKET,
+      Key: input.key,
+    })
+  );
+
+  return response.Metadata ?? {};
 }
 
 export function makeObjectPublicUrl(key: string): string {

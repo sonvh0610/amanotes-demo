@@ -241,6 +241,29 @@ export const kudoWatchers = pgTable(
   })
 );
 
+export const kudoTaggedUsers = pgTable(
+  'kudo_tagged_users',
+  {
+    kudoId: uuid('kudo_id')
+      .notNull()
+      .references(() => kudos.id, { onDelete: 'cascade' }),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => ({
+    uniqueKudoTaggedUser: unique('kudo_tagged_users_unique').on(
+      table.kudoId,
+      table.userId
+    ),
+    kudoTaggedUserKudoIdx: index('kudo_tagged_users_kudo_idx').on(table.kudoId),
+    kudoTaggedUserUserIdx: index('kudo_tagged_users_user_idx').on(table.userId),
+  })
+);
+
 export const monthlyGivingWallets = pgTable(
   'monthly_giving_wallets',
   {
@@ -419,6 +442,37 @@ export const notifications = pgTable(
       table.userId,
       table.createdAt,
       table.readAt
+    ),
+  })
+);
+
+export const aiMonthlySummaries = pgTable(
+  'ai_monthly_summaries',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    monthKey: varchar('month_key', { length: 7 }).notNull(),
+    contentHash: varchar('content_hash', { length: 64 }).notNull(),
+    summary: text('summary').notNull(),
+    sourceStatsJson: jsonb('source_stats_json')
+      .$type<Record<string, unknown>>()
+      .notNull(),
+    generatedAt: timestamp('generated_at', { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => ({
+    uniqueUserMonthHash: unique('ai_monthly_summaries_user_month_hash_unique').on(
+      table.userId,
+      table.monthKey,
+      table.contentHash
+    ),
+    userMonthGeneratedIdx: index('ai_monthly_summaries_user_month_generated_idx').on(
+      table.userId,
+      table.monthKey,
+      table.generatedAt
     ),
   })
 );

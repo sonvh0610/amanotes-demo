@@ -13,6 +13,9 @@ function getNotificationTitle(item: NotificationItem): string {
   if (item.type === 'kudo_received') {
     return 'Kudos Received';
   }
+  if (item.type === 'kudo_tagged') {
+    return 'Tagged in Kudos';
+  }
   if (item.type === 'reward_redeemed') {
     return 'Reward Redeemed';
   }
@@ -46,11 +49,22 @@ function getNotificationMessage(item: NotificationItem): string {
   if (item.type === 'reward_redeemed') {
     return 'Your reward redemption has been created successfully.';
   }
+  if (item.type === 'kudo_tagged') {
+    const senderName =
+      typeof item.payloadJson.senderName === 'string'
+        ? item.payloadJson.senderName
+        : 'A teammate';
+    return `${senderName} tagged you in a kudos post.`;
+  }
   return 'You have a new account update.';
 }
 
 function getNotificationKudoId(item: NotificationItem): string | null {
-  if (item.type !== 'kudo_received' && item.type !== 'kudo_commented') {
+  if (
+    item.type !== 'kudo_received' &&
+    item.type !== 'kudo_commented' &&
+    item.type !== 'kudo_tagged'
+  ) {
     return null;
   }
   return typeof item.payloadJson.kudoId === 'string'

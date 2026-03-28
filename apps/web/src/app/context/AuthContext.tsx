@@ -6,15 +6,10 @@ import {
   useMemo,
   useState,
 } from 'react';
-import { apiRequest } from '../lib/api';
+import type { AuthMeResponse } from '@org/shared';
+import { apiRequest, primeCsrfToken } from '../lib/api';
 
-interface AuthUser {
-  id: string;
-  email: string;
-  displayName: string;
-  avatarUrl: string | null;
-  role: 'member' | 'admin';
-}
+type AuthUser = AuthMeResponse['user'];
 
 interface AuthContextValue {
   user: AuthUser | null;
@@ -31,12 +26,14 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
   const refresh = async () => {
     try {
-      const result = await apiRequest<{ user: AuthUser }>('/auth/me', {
+      const result = await apiRequest<AuthMeResponse>('/auth/me', {
         cache: 'no-store',
       });
       setUser(result.user);
+      primeCsrfToken(result.csrfToken);
     } catch {
       setUser(null);
+      primeCsrfToken(null);
     } finally {
       setLoading(false);
     }
@@ -49,6 +46,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
       // Logout should still clear local auth state if server session is already invalid.
     } finally {
       setUser(null);
+      primeCsrfToken(null);
     }
   };
 

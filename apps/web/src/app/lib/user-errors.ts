@@ -43,6 +43,10 @@ const CONTEXT_RULES: Record<UserErrorContext, ErrorRule[]> = {
   generic: [],
   'auth-oauth': [
     {
+      includes: ['oidc is not configured'],
+      message: 'Work SSO is not available right now.',
+    },
+    {
       includes: ['google oauth is not configured'],
       message: 'Google sign-in is not available right now.',
     },
@@ -71,8 +75,8 @@ const CONTEXT_RULES: Record<UserErrorContext, ErrorRule[]> = {
       message: 'Please choose a valid teammate to receive your kudo.',
     },
     {
-      includes: ['at least one core tag is required'],
-      message: 'Please select at least one core value tag.',
+      includes: ['corevalue'],
+      message: 'Please choose a core value before sending this kudo.',
     },
     {
       includes: ['monthly budget exceeded'],
@@ -99,8 +103,16 @@ const CONTEXT_RULES: Record<UserErrorContext, ErrorRule[]> = {
       message: 'Please write at least 5 characters in your kudos message.',
     },
     {
-      includes: ['coretagids:'],
-      message: 'Please select at least one core value tag.',
+      includes: ['tagged teammates must be unique'],
+      message: 'Each tagged teammate can only be selected once.',
+    },
+    {
+      includes: ['tagged teammates cannot include sender or receiver'],
+      message: 'Tagged teammates must be different from the sender and receiver.',
+    },
+    {
+      includes: ['invalid tagged teammate selection'],
+      message: 'Please choose valid teammates to tag in this kudo.',
     },
   ],
   'feed-load': [],

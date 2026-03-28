@@ -1,4 +1,5 @@
 import type {
+  MonthlySummaryResponse,
   WalletResponse,
   WalletTransactionItem,
   WalletTransactionsResponse,
@@ -23,4 +24,19 @@ export async function fetchWalletTransactions(
   );
 }
 
-export type { WalletResponse, WalletTransactionItem, WalletTransactionsResponse };
+export async function fetchMonthlySummary(force = false) {
+  const params = new URLSearchParams();
+  if (force) {
+    params.set('force', '1');
+  }
+  return apiRequest<MonthlySummaryResponse>(
+    `/ai/monthly-summary${params.toString() ? `?${params.toString()}` : ''}`
+  );
+}
+
+export type {
+  MonthlySummaryResponse,
+  WalletResponse,
+  WalletTransactionItem,
+  WalletTransactionsResponse,
+};
