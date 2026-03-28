@@ -76,10 +76,6 @@ const CONTEXT_RULES: Record<UserErrorContext, ErrorRule[]> = {
       message: 'Please choose a valid teammate to receive your kudo.',
     },
     {
-      includes: ['corevalue'],
-      message: 'Please choose a core value before sending this kudo.',
-    },
-    {
       includes: ['monthly budget exceeded'],
       message: 'You do not have enough monthly points left to send this kudo.',
     },
@@ -102,19 +98,6 @@ const CONTEXT_RULES: Record<UserErrorContext, ErrorRule[]> = {
     {
       includes: ['description: too small'],
       message: 'Please write at least 5 characters in your kudos message.',
-    },
-    {
-      includes: ['tagged teammates must be unique'],
-      message: 'Each tagged teammate can only be selected once.',
-    },
-    {
-      includes: ['tagged teammates cannot include sender or receiver'],
-      message:
-        'Tagged teammates must be different from the sender and receiver.',
-    },
-    {
-      includes: ['invalid tagged teammate selection'],
-      message: 'Please choose valid teammates to tag in this kudo.',
     },
   ],
   'feed-load': [],

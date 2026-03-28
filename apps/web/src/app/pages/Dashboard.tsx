@@ -196,7 +196,39 @@ export default function Dashboard() {
             </Link>
           </section>
 
-          <section className="md:col-span-8 bg-white/40 rounded-xl p-1">
+          <section className="md:col-span-8 rounded-xl bg-surface-container-lowest p-6 shadow-[0_12px_40px_rgba(55,39,77,0.06)]">
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <h3 className="text-lg font-bold text-on-surface">
+                  AI Achievement Summary
+                </h3>
+                <p className="mt-1 text-sm text-on-surface-variant">
+                  Snapshot for{' '}
+                  {summary?.monthKey ??
+                    wallet?.givingWallet.monthKey ??
+                    'this month'}
+                </p>
+              </div>
+              <Link
+                to="/wallet"
+                className="text-sm font-bold text-primary hover:underline"
+              >
+                Open Wallet
+              </Link>
+            </div>
+            <p className="mt-4 text-sm leading-7 text-on-surface">
+              {summary?.summary ??
+                'Your AI monthly achievement summary will appear here once enough recognition data is available.'}
+            </p>
+          </section>
+
+          <TopRecognizersLeaderboard
+            items={topRecognizers}
+            monthLabel={leaderboardMonthLabel}
+            loading={loadingTopRecognizers}
+          />
+
+          <section className="md:col-span-12 bg-white/40 rounded-xl p-1">
             <div className="p-6 pb-2 flex justify-between items-center">
               <h3 className="font-bold text-lg text-on-surface">
                 Recent Recognition
@@ -242,38 +274,6 @@ export default function Dashboard() {
               ) : null}
             </div>
           </section>
-
-          <section className="md:col-span-8 rounded-xl bg-surface-container-lowest p-6 shadow-[0_12px_40px_rgba(55,39,77,0.06)]">
-            <div className="flex items-center justify-between gap-4">
-              <div>
-                <h3 className="text-lg font-bold text-on-surface">
-                  AI Achievement Summary
-                </h3>
-                <p className="mt-1 text-sm text-on-surface-variant">
-                  Snapshot for{' '}
-                  {summary?.monthKey ??
-                    wallet?.givingWallet.monthKey ??
-                    'this month'}
-                </p>
-              </div>
-              <Link
-                to="/wallet"
-                className="text-sm font-bold text-primary hover:underline"
-              >
-                Open Wallet
-              </Link>
-            </div>
-            <p className="mt-4 text-sm leading-7 text-on-surface">
-              {summary?.summary ??
-                'Your AI monthly achievement summary will appear here once enough recognition data is available.'}
-            </p>
-          </section>
-
-          <TopRecognizersLeaderboard
-            items={topRecognizers}
-            monthLabel={leaderboardMonthLabel}
-            loading={loadingTopRecognizers}
-          />
         </div>
       </div>
     </div>

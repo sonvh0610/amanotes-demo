@@ -4,14 +4,6 @@ import { KudoTaggedText } from '../features/kudos/components/KudoTaggedText';
 import { useKudoTagSuggestions } from '../features/kudos/hooks/useKudoTagSuggestions';
 import { useSendKudosForm } from '../features/kudos/hooks/useSendKudosForm';
 
-const CORE_VALUES = [
-  'Teamwork',
-  'Ownership',
-  'Craft Excellence',
-  'Customer Focus',
-  'Growth Mindset',
-];
-
 export default function SendKudos() {
   const {
     users,
@@ -20,12 +12,8 @@ export default function SendKudos() {
     receiver,
     points,
     setSafePoints,
-    coreValue,
-    setCoreValue,
     description,
     setDescription,
-    taggedUserIds,
-    setTaggedUserIds,
     mediaFiles,
     setMediaFiles,
     loading,
@@ -98,7 +86,7 @@ export default function SendKudos() {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-1">
             <div className="rounded-2xl bg-surface-container-low p-4">
               <label className="block text-xs font-bold uppercase tracking-wider text-on-surface-variant">
                 Points
@@ -125,55 +113,7 @@ export default function SendKudos() {
                 UTC month.
               </p>
             </div>
-
-            <label className="space-y-2 rounded-2xl bg-surface-container-low p-4">
-              <span className="text-xs font-bold uppercase tracking-wider text-on-surface-variant">
-                Core Value
-              </span>
-              <select
-                className="w-full rounded-xl border border-surface-container bg-white px-3 py-3 text-on-surface"
-                value={coreValue}
-                onChange={(event) => setCoreValue(event.target.value)}
-                required
-              >
-                {CORE_VALUES.map((item) => (
-                  <option key={item} value={item}>
-                    {item}
-                  </option>
-                ))}
-              </select>
-            </label>
           </div>
-
-          <label className="space-y-2">
-            <span className="text-xs font-bold uppercase tracking-wider text-on-surface-variant">
-              Tagged Teammates
-            </span>
-            <select
-              className="min-h-32 w-full rounded-xl border border-surface-container bg-white px-3 py-3 text-on-surface"
-              multiple
-              value={taggedUserIds}
-              onChange={(event) => {
-                const values = Array.from(
-                  event.target.selectedOptions,
-                  (option) => option.value
-                );
-                setTaggedUserIds(values);
-              }}
-            >
-              {users
-                .filter((item) => item.id !== receiverId)
-                .map((item) => (
-                  <option key={item.id} value={item.id}>
-                    {item.displayName} ({item.email})
-                  </option>
-                ))}
-            </select>
-            <p className="text-xs text-on-surface-variant">
-              Hold command/control to select multiple teammates for real-time
-              notifications.
-            </p>
-          </label>
 
           <div className="space-y-3">
             <label className="text-xs font-bold uppercase tracking-wider text-on-surface-variant">

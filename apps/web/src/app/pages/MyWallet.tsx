@@ -91,12 +91,6 @@ export default function MyWallet() {
           </section>
         </div>
 
-        <WalletTransactionHistory
-          items={transactions}
-          loadingInitial={loadingInitialTransactions}
-          loadingMore={loadingMoreTransactions}
-        />
-
         <section className="mt-8 rounded-2xl bg-surface-container-lowest p-6 shadow-[0_12px_40px_rgba(55,39,77,0.06)]">
           <div className="flex items-center justify-between gap-3">
             <div>
@@ -162,6 +156,12 @@ export default function MyWallet() {
             </p>
           )}
         </section>
+
+        <WalletTransactionHistory
+          items={transactions}
+          loadingInitial={loadingInitialTransactions}
+          loadingMore={loadingMoreTransactions}
+        />
         {hasMoreTransactions ? (
           <div className="h-10" ref={loadMoreRef} />
         ) : null}
