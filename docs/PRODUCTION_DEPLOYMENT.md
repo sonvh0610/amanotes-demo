@@ -76,7 +76,7 @@ The CD workflow runs this sequence on the server:
 5. `docker-compose --env-file .env.prod -f deploy/docker-compose.aws-nano.yml run --rm api node apps/api/dist/apps/api/src/app/db/migrate.js`
 6. `docker-compose --env-file .env.prod -f deploy/docker-compose.aws-nano.yml up -d api`
 7. `docker image prune -f`
-8. `npx vercel deploy --prod --yes --token="$VERCEL_TOKEN"` from `apps/web`
+8. `npx vercel pull` + `npx vercel build --prod` + `npx vercel deploy --prebuilt --prod` from `apps/web`
 
 ## Smoke Checks After Deploy
 
