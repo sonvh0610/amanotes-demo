@@ -11,6 +11,16 @@ type MockResponse = {
   json: () => Promise<unknown>;
 };
 
+type RequestLike = {
+  toString: () => string;
+};
+
+type FetchOptionsLike = {
+  method?: string;
+  cache?: string;
+  headers?: Record<string, string>;
+};
+
 const authenticatedUser = {
   id: 'user-1',
   email: 'alex@goodjob.app',
@@ -91,7 +101,7 @@ describe('auth features', () => {
   });
 
   it('clears local auth state on logout even when API logout fails', async () => {
-    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+    const fetchMock = vi.fn(async (input: RequestLike) => {
       const url = input.toString();
 
       if (url.endsWith('/auth/me')) {
@@ -126,7 +136,8 @@ describe('auth features', () => {
       </QueryClientProvider>
     );
 
-    expect((await findByTestId('auth-state')).textContent).toContain(
+    const authState = await findByTestId('auth-state');
+    expect((authState as { textContent?: string }).textContent ?? '').toContain(
       'authenticated'
     );
     fireEvent.click(getByText('logout'));
@@ -155,12 +166,13 @@ describe('auth features', () => {
       expect(fetchMock).toHaveBeenCalled();
     });
 
-    const [, options] = fetchMock.mock.calls[0] as [string, RequestInit];
+    const firstCall = fetchMock.mock.calls[0] as unknown[] | undefined;
+    const options = (firstCall?.[1] ?? {}) as FetchOptionsLike;
     expect(options.cache).toBe('no-store');
   });
 
   it('does not send json content-type header for body-less logout request', async () => {
-    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+    const fetchMock = vi.fn(async (input: RequestLike) => {
       const url = input.toString();
 
       if (url.endsWith('/auth/me')) {
@@ -198,11 +210,13 @@ describe('auth features', () => {
     });
 
     const logoutCall = fetchMock.mock.calls.find((call) =>
-      call[0].toString().endsWith('/auth/logout')
+      String(call[0]).endsWith('/auth/logout')
     );
     expect(logoutCall).toBeTruthy();
-    const logoutOptions = logoutCall?.[1] as RequestInit | undefined;
-    const headers = logoutOptions?.headers as Record<string, string> | undefined;
+    const logoutOptions = (logoutCall as unknown[] | undefined)?.[1] as
+      | FetchOptionsLike
+      | undefined;
+    const headers = logoutOptions?.headers;
     expect(headers?.['content-type']).toBeUndefined();
   });
 });

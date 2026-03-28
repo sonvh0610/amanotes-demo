@@ -21,3 +21,24 @@
 - The `nx-generate` skill handles generator discovery internally - don't call nx_docs just to look up generator syntax
 
 <!-- nx configuration end-->
+
+## Goodjob Kudos Feature Rules
+
+- For `Send Kudos` and `Kudo Feed`, keep logic and presentation separated:
+  - Put server calls in `apps/web/src/app/features/kudos/api.ts`.
+  - Put stateful behavior in `apps/web/src/app/features/kudos/hooks/*`.
+  - Keep page files in `apps/web/src/app/pages/*` as composition/presentation only.
+- Reuse media UI components across features that need uploads or previews:
+  - Upload and local preview: `apps/web/src/app/components/media/KudosMediaDropzone.tsx`.
+  - Feed/comment media grids and modal: `apps/web/src/app/features/kudos/components/*`.
+- `Send Kudos` payload contract defaults:
+  - No tagged-teammates field.
+  - No core/core-value field.
+  - Points use numeric input with allowed range 10-50.
+  - Up to 5 media files per submission.
+- Feed interaction contracts:
+  - Reaction buttons must be toggle-able and show count in the button.
+  - Comment composer supports text and/or media (up to 5 files) and reuses upload component.
+- Preserve dashboard styling language:
+  - Primary actions use primary color and pointer cursor.
+  - Reusable components should keep current design tokens and Tailwind utility conventions.
