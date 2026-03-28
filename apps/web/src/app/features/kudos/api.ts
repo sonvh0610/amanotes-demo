@@ -3,6 +3,7 @@ import type {
   CreateKudoBody,
   FeedResponse,
   KudoUserOption,
+  TopRecognizersResponse,
 } from '@org/shared';
 import { apiRequest } from '../../lib/api';
 
@@ -36,6 +37,14 @@ export async function sendKudo(input: CreateKudoBody) {
 export async function fetchFeed(cursor?: string | null) {
   return apiRequest<FeedResponse>(
     `/feed${cursor ? `?cursor=${encodeURIComponent(cursor)}` : ''}`
+  );
+}
+
+export async function fetchTopRecognizers(limit = 5) {
+  const params = new URLSearchParams();
+  params.set('limit', String(limit));
+  return apiRequest<TopRecognizersResponse>(
+    `/feed/top-recognizers?${params.toString()}`
   );
 }
 

@@ -95,7 +95,11 @@ export const feedCursorSchema = z.object({
 
 export const listFeedQuerySchema = z.object({
   cursor: z.string().optional(),
-  limit: z.coerce.number().int().min(1).max(50).default(20),
+  limit: z.coerce.number().int().min(1).max(50).default(10),
+});
+
+export const listTopRecognizersQuerySchema = z.object({
+  limit: z.coerce.number().int().min(1).max(10).default(5),
 });
 
 export const listWalletTransactionsQuerySchema = z.object({
@@ -121,6 +125,9 @@ export type ListUsersQuery = z.infer<typeof listUsersQuerySchema>;
 export type RedeemRewardBody = z.infer<typeof redeemRewardBodySchema>;
 export type CreateRewardBody = z.infer<typeof createRewardBodySchema>;
 export type UpdateRewardBody = z.infer<typeof updateRewardBodySchema>;
+export type ListTopRecognizersQuery = z.infer<
+  typeof listTopRecognizersQuerySchema
+>;
 export type ListWalletTransactionsQuery = z.infer<
   typeof listWalletTransactionsQuerySchema
 >;
@@ -180,6 +187,18 @@ export interface FeedItem {
 export interface FeedResponse {
   items: FeedItem[];
   nextCursor: string | null;
+}
+
+export interface TopRecognizerItem {
+  userId: string;
+  displayName: string;
+  avatarUrl: string | null;
+  kudosSent: number;
+  pointsGiven: number;
+}
+
+export interface TopRecognizersResponse {
+  items: TopRecognizerItem[];
 }
 
 export interface WalletResponse {

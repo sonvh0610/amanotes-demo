@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import type { FeedResponse } from '@org/shared';
 import { AppIcon } from '../components/ui/AppIcon';
+import { TopRecognizersLeaderboard } from '../features/kudos/components/TopRecognizersLeaderboard';
+import { useTopRecognizers } from '../features/kudos/hooks/useTopRecognizers';
 import { useAuth } from '../context/AuthContext';
 import { apiRequest } from '../lib/api';
 import { getUserFacingError } from '../lib/user-errors';
@@ -31,6 +33,11 @@ interface FeedPreviewItem {
 
 export default function Dashboard() {
   const { user } = useAuth();
+  const {
+    items: topRecognizers,
+    loading: loadingTopRecognizers,
+    error: topRecognizersError,
+  } = useTopRecognizers(5);
   const [wallet, setWallet] = useState<WalletResponse['wallet'] | null>(null);
   const [recentFeed, setRecentFeed] = useState<FeedPreviewItem[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -70,6 +77,21 @@ export default function Dashboard() {
     );
   }, [wallet]);
 
+  const leaderboardMonthLabel = useMemo(() => {
+    const monthKey = wallet?.givingWallet.monthKey;
+    if (!monthKey) return 'Current Month';
+
+    const [year, month] = monthKey.split('-').map(Number);
+    if (!Number.isFinite(year) || !Number.isFinite(month)) return 'Current Month';
+
+    const date = new Date(Date.UTC(year, month - 1, 1));
+    return new Intl.DateTimeFormat(undefined, {
+      month: 'long',
+      year: 'numeric',
+      timeZone: 'UTC',
+    }).format(date);
+  }, [wallet?.givingWallet.monthKey]);
+
   return (
     <div className="min-h-[calc(100vh-5rem)] px-4 py-6 sm:px-6 lg:px-8 md:py-8">
       <div className="max-w-7xl mx-auto">
@@ -92,7 +114,10 @@ export default function Dashboard() {
             Send Kudos
           </Link>
         </header>
-        {error ? <p className="mb-6 text-sm text-red-600">{error}</p> : null}
+        {error ? <p className="mb-3 text-sm text-red-600">{error}</p> : null}
+        {topRecognizersError ? (
+          <p className="mb-6 text-sm text-red-600">{topRecognizersError}</p>
+        ) : null}
 
         <div className="grid grid-cols-1 md:grid-cols-12 gap-6 md:gap-8">
           <section className="md:col-span-8 bg-surface-container-lowest rounded-xl p-8 shadow-[0_12px_40px_rgba(55,39,77,0.06)] flex flex-col justify-between relative overflow-hidden group">
@@ -165,7 +190,7 @@ export default function Dashboard() {
             </Link>
           </section>
 
-          <section className="md:col-span-12 bg-white/40 rounded-xl p-1">
+          <section className="md:col-span-8 bg-white/40 rounded-xl p-1">
             <div className="p-6 pb-2 flex justify-between items-center">
               <h3 className="font-bold text-lg text-on-surface">
                 Recent Recognition
@@ -211,6 +236,12 @@ export default function Dashboard() {
               ) : null}
             </div>
           </section>
+
+          <TopRecognizersLeaderboard
+            items={topRecognizers}
+            monthLabel={leaderboardMonthLabel}
+            loading={loadingTopRecognizers}
+          />
         </div>
       </div>
     </div>

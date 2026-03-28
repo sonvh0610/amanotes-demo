@@ -1,6 +1,6 @@
 import { FastifyInstance } from 'fastify';
-import { and, asc, desc, eq, inArray, lt, or, sql } from 'drizzle-orm';
-import { listFeedQuerySchema } from '@org/shared';
+import { and, asc, desc, eq, gte, inArray, lt, or, sql } from 'drizzle-orm';
+import { listFeedQuerySchema, listTopRecognizersQuerySchema } from '@org/shared';
 import { db } from '../../db/client.js';
 import {
   commentMediaAssets,
@@ -11,6 +11,7 @@ import {
   reactions,
   users,
 } from '../../db/schema.js';
+import { monthKeyFromDate } from '../../lib/time.js';
 import { createPresignedReadUrl } from '../../services/storage.js';
 
 function decodeCursor(
@@ -41,6 +42,39 @@ function encodeCursor(createdAt: Date, id: string): string {
 }
 
 export default async function feedRoutes(fastify: FastifyInstance) {
+  fastify.get(
+    '/top-recognizers',
+    { preHandler: fastify.requireAuth },
+    async (request, reply) => {
+      const parsed = listTopRecognizersQuerySchema.safeParse(request.query);
+      if (!parsed.success) {
+        return reply.status(400).send({ error: parsed.error.flatten() });
+      }
+
+      const monthStart = new Date(`${monthKeyFromDate()}-01T00:00:00.000Z`);
+      const rows = await db
+        .select({
+          userId: users.id,
+          displayName: users.displayName,
+          avatarUrl: users.avatarUrl,
+          kudosSent: sql<number>`count(${kudos.id})::int`,
+          pointsGiven: sql<number>`coalesce(sum(${kudos.points}), 0)::int`,
+        })
+        .from(kudos)
+        .innerJoin(users, eq(kudos.senderId, users.id))
+        .where(gte(kudos.createdAt, monthStart))
+        .groupBy(users.id, users.displayName, users.avatarUrl)
+        .orderBy(
+          desc(sql`count(${kudos.id})`),
+          desc(sql`coalesce(sum(${kudos.points}), 0)`),
+          users.displayName
+        )
+        .limit(parsed.data.limit);
+
+      return reply.send({ items: rows });
+    }
+  );
+
   fastify.get('/', { preHandler: fastify.requireAuth }, async (request, reply) => {
     const parsed = listFeedQuerySchema.safeParse(request.query);
     if (!parsed.success) {

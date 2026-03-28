@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../../context/AuthContext';
 import { SidebarNavLink } from '../../navigation/SidebarNavLink';
@@ -25,7 +26,10 @@ export function AppSidebar({
   const navItems = NAV_ITEMS;
   const profileName = user?.displayName ?? 'Member';
   const profileEmail = user?.email ?? '';
+  const profileAvatarUrl = user?.avatarUrl ?? undefined;
   const profileInitial = profileName.trim().charAt(0).toUpperCase() || 'M';
+  const [avatarFailed, setAvatarFailed] = useState(false);
+  const canShowAvatar = Boolean(profileAvatarUrl) && !avatarFailed;
 
   const onLogout = async () => {
     await logout();
@@ -80,11 +84,16 @@ export function AppSidebar({
                 collapsed ? 'justify-center' : 'gap-3 px-2'
               }`}
             >
-              {user?.avatarUrl ? (
+              {canShowAvatar ? (
                 <img
                   alt={profileName}
                   className="h-10 w-10 shrink-0 rounded-full object-cover"
-                  src={user.avatarUrl}
+                  src={profileAvatarUrl}
+                  loading="lazy"
+                  referrerPolicy="no-referrer"
+                  onError={() => {
+                    setAvatarFailed(true);
+                  }}
                 />
               ) : (
                 <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-bold text-primary">
@@ -162,11 +171,16 @@ export function AppSidebar({
                   <span>Close Menu</span>
                 </button>
                 <div className="flex items-center gap-3 px-2">
-                  {user?.avatarUrl ? (
+                  {canShowAvatar ? (
                     <img
                       alt={profileName}
                       className="h-10 w-10 shrink-0 rounded-full object-cover"
-                      src={user.avatarUrl}
+                      src={profileAvatarUrl}
+                      loading="lazy"
+                      referrerPolicy="no-referrer"
+                      onError={() => {
+                        setAvatarFailed(true);
+                      }}
                     />
                   ) : (
                     <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-bold text-primary">
