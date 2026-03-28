@@ -1,129 +1,210 @@
-# Goodjob Case Study Upgrade
+# Goodjob Case Study Submission
 
-This repository implements Amanotes Case Study 1 as an Nx monorepo with:
+This repository is a production-oriented kudos and rewards platform delivered as an Nx monorepo.
 
-- `apps/api`: Fastify + TypeScript + Drizzle + PostgreSQL + Redis + BullMQ + WebSocket
-- `apps/web`: React + Vite + React Query + Tailwind
-- `packages/shared`: shared API contracts and realtime types
+It is organized into clearly separated frontend and backend applications:
 
-## What is implemented
+- `apps/web`: React 19 + Vite + TypeScript + Tailwind CSS
+- `apps/api`: Fastify + TypeScript + Drizzle ORM + PostgreSQL + Redis + BullMQ
+- `packages/shared`: shared validation schemas, contracts, and cross-app types
 
-- Enterprise auth and security
-  - OIDC SSO as the primary enterprise auth path
-  - Optional Google and Slack OAuth fallback for local/demo flows
-  - Cookie sessions with session rotation on login
-  - CSRF protection for cookie-authenticated mutating routes
-  - Rate limiting on the API
-- Kudos
-  - `POST /kudos` enforces 10-50 points, no self-kudos, required `coreValue`, optional tagged teammates, and up to 5 media files
-  - Monthly giving budget of 200 points enforced with DB transactions and row locks
-  - Immutable point ledger and monthly budget ledger
-- Feed and notifications
-  - Cursor-paginated feed with reactions, comments, media, receiver name, core value, and tagged teammates
-  - Persisted notifications plus realtime websocket fanout through Redis pub/sub
-  - Tagged users receive dedicated `kudo_tagged` notifications
-- Rewards
-  - Reward catalog CRUD
-  - Transactional redemption with idempotency keys and anti-double-spend locking
-- Media pipeline
-  - Presigned uploads to S3/MinIO
-  - Async media validation worker via BullMQ
-  - Video duration validated from object metadata server-side without blocking the API request path
-- AI feature
-  - `GET /ai/monthly-summary?month=YYYY-MM`
-  - Monthly achievement summaries generated from kudos, points, core values, notable colleagues, and reward redemptions
-  - Cached in Postgres by `userId + monthKey + contentHash`
+## Submission Mapping
 
-## Local setup
+### A. Git Repository
 
-1. Install dependencies
+- Source code is split by responsibility inside a single Nx monorepo.
+- The repository includes iterative commit history with scoped commit messages, for example:
+  - `feat: ship case-study production upgrade`
+  - `fix: stabilize ci typecheck and deploy gates`
+  - `style: format kudos route for ci`
+- Setup instructions are included below.
+- Environment variable scaffolding is provided in [`.env.example`](/Users/sonvh/Codes/goodjob/.env.example).
+
+### B. Hosting (Optional)
+
+- Production deployment guidance is documented in [`docs/PRODUCTION_DEPLOYMENT.md`](/Users/sonvh/Codes/goodjob/docs/PRODUCTION_DEPLOYMENT.md).
+- The web app can be deployed to Vercel and the API can run via Docker on a VM or container host.
+- No live URL is committed in this repository today. Add it here when a public deployment is available.
+
+### C. Test Cases / Testing Strategy
+
+Current automated coverage includes:
+
+- Unit and rule-level validation around point ranges, self-kudo rejection, and monthly budget enforcement
+- Integration coverage for the "Give Kudo" flow from HTTP request to database persistence
+- Edge case and concurrency coverage for:
+  - attempting to give points to oneself
+  - overspending the monthly giving budget
+  - concurrent reward redemption requests
+
+Primary test files:
+
+- [`apps/api/tests/case-study.spec.ts`](/Users/sonvh/Codes/goodjob/apps/api/tests/case-study.spec.ts)
+- [`apps/web/src/app/app.spec.tsx`](/Users/sonvh/Codes/goodjob/apps/web/src/app/app.spec.tsx)
+- [`apps/web/src/app/auth.features.spec.tsx`](/Users/sonvh/Codes/goodjob/apps/web/src/app/auth.features.spec.tsx)
+
+## Product Scope
+
+Implemented platform capabilities:
+
+- Authenticated kudos sending with points, description, core value, optional tagged teammates, and optional media
+- Monthly giving budget enforcement with transactional locking
+- Feed, reactions, comments, and realtime notifications
+- Reward catalog management and atomic reward redemption
+- AI-generated monthly summaries with cache invalidation when source activity changes
+- Media upload and validation pipeline backed by S3-compatible storage plus Redis/BullMQ workers
+
+## Architecture Choices
+
+### Why an Nx Monorepo
+
+- Keeps frontend, backend, and shared contracts in one repository
+- Makes cross-project type sharing straightforward
+- Standardizes builds, tests, and typechecks through a single task runner
+
+### Why PostgreSQL + Drizzle
+
+- PostgreSQL is a strong fit for transactional integrity, row locking, and ledger-style persistence
+- The case study requires correctness under concurrency, which is easier to enforce with relational constraints and transactions
+- Drizzle keeps the schema close to TypeScript while still allowing direct SQL where row locks matter
+
+### Why Redis + BullMQ
+
+- Redis supports realtime fanout and lightweight asynchronous job orchestration
+- BullMQ is used to move media validation work out of the request path so uploads do not block the API
+
+### Why React Query on the Frontend
+
+- Server state dominates this product: feed data, wallet data, rewards, notifications, and auth-adjacent fetches
+- React Query gives caching, refetching, and loading/error state handling without introducing heavier client-state complexity
+
+## Local Setup
+
+### 1. Install dependencies
 
 ```bash
 npm install
 ```
 
-2. Start infra
+### 2. Start infrastructure
 
 ```bash
 docker compose up -d
 ```
 
-PostgreSQL is exposed on `54322`, Redis on `6379`, and MinIO on `9000`.
+Local services:
 
-3. Copy env
+- PostgreSQL: `localhost:54322`
+- Redis: `localhost:6379`
+- MinIO: `localhost:9000`
+- MinIO console: `localhost:9001`
+
+### 3. Create local environment file
 
 ```bash
 cp .env.example .env
 ```
 
-4. Run migrations
+### 4. Run database migrations
 
 ```bash
 npm run migrate
 ```
 
-5. Start the API and web app
+### 5. Start the applications
+
+In separate terminals:
 
 ```bash
 npm run dev:api
+```
+
+```bash
 npm run dev:web
 ```
 
-## Auth and security model
+Default local URLs:
 
-- Session auth uses secure cookie settings derived from `APP_BASE_URL` and `API_BASE_URL`
-- CSRF uses a double-submit token:
-  - authenticated clients fetch `/auth/csrf`
-  - mutating requests send `x-csrf-token`
-  - the API validates the header against the CSRF cookie
-- OIDC SSO is configured with:
-  - `OIDC_ISSUER_URL`
-  - `OIDC_CLIENT_ID`
-  - `OIDC_CLIENT_SECRET`
-  - `OIDC_REDIRECT_URI`
-  - optional `OIDC_SCOPES`
+- Web: `http://localhost:4200`
+- API: `http://localhost:3000`
 
-## AI summary configuration
+## Nx Commands
 
-Set these env vars to enable LLM-backed summaries:
+Common workspace commands:
 
-- `OPENAI_API_KEY`
-- `OPENAI_MODEL`
+- Start web app: `npm exec -- nx run @org/web:dev`
+- Start API: `npm exec -- nx run @org/api:serve`
+- Run API migrations: `npm exec -- nx run @org/api:migrate`
+- Typecheck workspace: `npm exec -- nx run-many -t typecheck`
+- Build workspace: `npm exec -- nx run-many -t build`
+- Test API: `npm exec -- nx run @org/api:test`
+- Test web: `npm exec -- nx run @org/web:test -- --run`
 
-If `OPENAI_API_KEY` is empty, the API returns a deterministic fallback summary so the UI and tests still work.
+## Environment Variables
 
-## Nx tasks
+The repository includes [`.env.example`](/Users/sonvh/Codes/goodjob/.env.example) with local defaults and placeholders.
 
-- API serve: `npm exec -- nx run @org/api:serve`
-- API migrate: `npm exec -- nx run @org/api:migrate`
-- API test: `npm exec -- nx run @org/api:test`
-- Web dev: `npm exec -- nx run @org/web:dev`
-- Typecheck all: `npm run typecheck`
-- Build all: `npm run build`
+Key groups:
 
-## Testing strategy
+- App runtime: `NODE_ENV`, `HOST`, `PORT`
+- Database and cache: `DATABASE_URL`, `REDIS_URL`
+- Frontend/backend origins: `APP_BASE_URL`, `API_BASE_URL`, `VITE_*`
+- Auth and session security: `SESSION_*`, `JWT_SECRET`, `CSRF_*`, `OIDC_*`, OAuth provider secrets
+- Media storage: `S3_*`
+- AI summary feature: `OPENAI_API_KEY`, `OPENAI_MODEL`
 
-- Web tests: auth and route rendering
-- API tests:
-  - self-kudo rejection
-  - kudo persistence with ledgers and tagged teammates
-  - CSRF enforcement
-  - OIDC-backed protected route access
-  - concurrent redemption protection
-  - concurrent monthly budget protection
-  - monthly summary cache refresh behavior
+If `OPENAI_API_KEY` is not configured, the API falls back to a deterministic summary response so local development and tests still work.
 
-## Key routes
+## Testing Strategy
 
-- Auth: `/auth/providers`, `/auth/csrf`, `/auth/me`, `/auth/logout`, `/auth/oidc/start`, `/auth/oidc/callback`, `/auth/oauth/:provider/start`, `/auth/oauth/:provider/callback`
-- Uploads: `/uploads/presign`, `/uploads/complete`, `/uploads/media/:id/view`
-- Kudos and feed: `/kudos`, `/feed`, `/feed/:id`, `/kudos/:id/reactions`, `/kudos/:id/comments`
-- Rewards: `/rewards`, `/rewards/:id/redeem`
-- Notifications: `/notifications`, `/notifications/read`, websocket `/notifications/stream`
-- AI: `/ai/monthly-summary`
+### Unit and Rule-Level Coverage
 
-## Production and CI/CD
+The backend suite verifies business rules around:
 
-- CI: `.github/workflows/ci.yml`
-- CD: `.github/workflows/cd.yml`
-- Deployment runbook: [`docs/PRODUCTION_DEPLOYMENT.md`](./docs/PRODUCTION_DEPLOYMENT.md)
+- valid point ranges for kudos
+- self-kudo rejection
+- monthly giving budget enforcement and reset behavior through wallet and ledger state
+
+### Integration Coverage
+
+The "Give Kudo" flow is tested end-to-end through the API layer:
+
+- authenticated request
+- CSRF-protected mutation
+- database persistence
+- ledger writes
+- tagged teammate persistence
+- feed payload verification
+
+### Edge Cases and Concurrency
+
+The suite explicitly covers:
+
+- rejecting attempts to give points to yourself
+- rejecting overspend scenarios against the monthly giving budget
+- preventing double-spend during concurrent reward redemption
+
+Run the test suite with:
+
+```bash
+npm exec -- nx run @org/api:test
+npm exec -- nx run @org/web:test -- --run
+```
+
+## Production Build Notes
+
+- The frontend production bundle is generated with `vite build`
+- Nx build entrypoints are available for both applications
+- Deployment and CI/CD details live in [`docs/PRODUCTION_DEPLOYMENT.md`](/Users/sonvh/Codes/goodjob/docs/PRODUCTION_DEPLOYMENT.md)
+
+To produce local build artifacts:
+
+```bash
+npm exec -- nx run-many -t build
+```
+
+## Additional Documentation
+
+- Submission checklist: [`docs/SUBMISSION_PLAN.md`](/Users/sonvh/Codes/goodjob/docs/SUBMISSION_PLAN.md)
+- Original case-study plan: [`docs/CASE_STUDY_1_PLAN.md`](/Users/sonvh/Codes/goodjob/docs/CASE_STUDY_1_PLAN.md)
+- Production runbook: [`docs/PRODUCTION_DEPLOYMENT.md`](/Users/sonvh/Codes/goodjob/docs/PRODUCTION_DEPLOYMENT.md)
