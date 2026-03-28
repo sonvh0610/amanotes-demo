@@ -1,0 +1,22 @@
+services:
+  api:
+    image: ghcr.io/${GHCR_OWNER}/goodjob-api:${IMAGE_TAG:-latest}
+    restart: unless-stopped
+    env_file:
+      - ./.env.prod
+    networks:
+      - goodjob
+
+  web:
+    image: ghcr.io/${GHCR_OWNER}/goodjob-web:${IMAGE_TAG:-latest}
+    restart: unless-stopped
+    depends_on:
+      - api
+    ports:
+      - '80:80'
+    networks:
+      - goodjob
+
+networks:
+  goodjob:
+    driver: bridge

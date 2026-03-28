@@ -1,0 +1,11 @@
+.git
+.github
+.nx
+node_modules
+tmp
+dist
+apps/**/dist
+apps/**/out-tsc
+packages/**/dist
+coverage
+*.log

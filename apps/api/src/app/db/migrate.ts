@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { pgPool } from './client.js';
@@ -13,7 +14,34 @@ async function ensureMigrationsTable() {
 }
 
 async function run() {
-  const migrationsDir = path.resolve(__dirname, 'migrations');
+  const migrationsDirCandidates = [
+    path.resolve(__dirname, 'migrations'),
+    // Nx esbuild assets may be emitted under dist/src/... while JS lives in
+    // dist/apps/api/src/..., so keep a fallback for production bundles.
+    path.resolve(__dirname, '../../../../src/app/db/migrations'),
+  ];
+
+  let migrationsDir: string | null = null;
+  for (const candidate of migrationsDirCandidates) {
+    try {
+      const stat = await fs.stat(candidate);
+      if (stat.isDirectory()) {
+        migrationsDir = candidate;
+        break;
+      }
+    } catch {
+      // Keep trying the next candidate.
+    }
+  }
+
+  if (!migrationsDir) {
+    throw new Error(
+      `Unable to locate migrations directory. Tried: ${migrationsDirCandidates.join(
+        ', '
+      )}`
+    );
+  }
+
   const files = (await fs.readdir(migrationsDir))
     .filter((name) => name.endsWith('.sql'))
     .sort();

@@ -97,6 +97,11 @@ This keeps OAuth callback + session cookie on the same origin, avoiding browser 
 - Typecheck all: `npm run typecheck`
 - Build all: `npm run build`
 
+## Production rollout
+
+- Refactor roadmap: [`docs/REFACTOR_ROADMAP.md`](./docs/REFACTOR_ROADMAP.md)
+- CI/CD and deploy runbook: [`docs/PRODUCTION_DEPLOYMENT.md`](./docs/PRODUCTION_DEPLOYMENT.md)
+
 ## Key API routes
 
 - Auth: `/auth/logout`, `/auth/me`, `/auth/oauth/:provider/start`, `/auth/oauth/:provider/callback`
