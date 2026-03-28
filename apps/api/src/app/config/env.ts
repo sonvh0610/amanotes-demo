@@ -21,8 +21,8 @@ const envSchema = z.object({
   CSRF_HEADER_NAME: z.string().default('x-csrf-token'),
   S3_ENDPOINT: z.string().url().optional(),
   S3_REGION: z.string().default('ap-southeast-1'),
-  S3_ACCESS_KEY_ID: z.string().default('minioadmin'),
-  S3_SECRET_ACCESS_KEY: z.string().default('minioadmin'),
+  S3_ACCESS_KEY_ID: z.string().min(1).optional(),
+  S3_SECRET_ACCESS_KEY: z.string().min(1).optional(),
   S3_BUCKET: z.string().default('goodjob-media'),
   OIDC_ISSUER_URL: z.string().url().optional(),
   OIDC_CLIENT_ID: z.string().optional(),
@@ -43,9 +43,55 @@ const envSchema = z.object({
   RATE_LIMIT_WINDOW: z.string().default('1 minute'),
 });
 
-export type AppEnv = z.infer<typeof envSchema>;
+type ParsedEnv = z.infer<typeof envSchema>;
+
+export type AppEnv = Omit<
+  ParsedEnv,
+  'S3_ACCESS_KEY_ID' | 'S3_SECRET_ACCESS_KEY'
+> & {
+  S3_ACCESS_KEY_ID: string;
+  S3_SECRET_ACCESS_KEY: string;
+};
 
 let cachedEnv: AppEnv | null = null;
+
+function resolveS3Env(
+  parsed: ParsedEnv
+): Pick<AppEnv, 'S3_ACCESS_KEY_ID' | 'S3_SECRET_ACCESS_KEY'> {
+  const isLocalMinio =
+    parsed.NODE_ENV !== 'production' && Boolean(parsed.S3_ENDPOINT);
+
+  const accessKeyId =
+    parsed.S3_ACCESS_KEY_ID ?? (isLocalMinio ? 'minioadmin' : undefined);
+  const secretAccessKey =
+    parsed.S3_SECRET_ACCESS_KEY ?? (isLocalMinio ? 'minioadmin' : undefined);
+
+  if (!accessKeyId) {
+    throw new Error(
+      `Invalid environment variables:\nS3_ACCESS_KEY_ID: Required (set this in production; defaults only apply when S3_ENDPOINT is set for local MinIO)`
+    );
+  }
+  if (!secretAccessKey) {
+    throw new Error(
+      `Invalid environment variables:\nS3_SECRET_ACCESS_KEY: Required (set this in production; defaults only apply when S3_ENDPOINT is set for local MinIO)`
+    );
+  }
+
+  if (parsed.NODE_ENV === 'production') {
+    const usingMinioDefaults =
+      accessKeyId === 'minioadmin' || secretAccessKey === 'minioadmin';
+    if (usingMinioDefaults) {
+      throw new Error(
+        `Invalid environment variables:\nS3_ACCESS_KEY_ID/S3_SECRET_ACCESS_KEY: Refusing to run in production with MinIO default credentials ("minioadmin"). Set real credentials in your deployment environment.`
+      );
+    }
+  }
+
+  return {
+    S3_ACCESS_KEY_ID: accessKeyId,
+    S3_SECRET_ACCESS_KEY: secretAccessKey,
+  };
+}
 
 export function getEnv(): AppEnv {
   if (cachedEnv) {
@@ -60,6 +106,9 @@ export function getEnv(): AppEnv {
     throw new Error(`Invalid environment variables:\n${details}`);
   }
 
-  cachedEnv = parsed.data;
+  cachedEnv = {
+    ...parsed.data,
+    ...resolveS3Env(parsed.data),
+  };
   return cachedEnv;
 }

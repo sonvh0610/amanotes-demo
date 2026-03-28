@@ -3,7 +3,10 @@ type GoodJobLogoProps = {
   compact?: boolean;
 };
 
-export function GoodJobLogo({ className = '', compact = false }: GoodJobLogoProps) {
+export function GoodJobLogo({
+  className = '',
+  compact = false,
+}: GoodJobLogoProps) {
   return (
     <img
       alt="Good Job logo"

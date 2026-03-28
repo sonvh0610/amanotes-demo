@@ -27,7 +27,11 @@ export function MediaPicker({
     () =>
       files
         .filter((file) => file.type.startsWith('image/'))
-        .map((file) => ({ key: `${file.name}-${file.size}`, file, url: URL.createObjectURL(file) })),
+        .map((file) => ({
+          key: `${file.name}-${file.size}`,
+          file,
+          url: URL.createObjectURL(file),
+        })),
     [files]
   );
 
@@ -56,7 +60,9 @@ export function MediaPicker({
         }}
       />
       {helperText ? (
-        <span className="mt-1 block text-xs text-on-surface-variant">{helperText}</span>
+        <span className="mt-1 block text-xs text-on-surface-variant">
+          {helperText}
+        </span>
       ) : null}
 
       {files.length > 0 ? (
@@ -77,7 +83,10 @@ export function MediaPicker({
             {files
               .filter((file) => !file.type.startsWith('image/'))
               .map((file) => (
-                <li key={`${file.name}-${file.size}`} className="text-xs text-on-surface-variant">
+                <li
+                  key={`${file.name}-${file.size}`}
+                  className="text-xs text-on-surface-variant"
+                >
                   {file.type.startsWith('video/')
                     ? `Video selected: ${file.name} (preview unavailable)`
                     : file.name}

@@ -65,7 +65,7 @@ Set these in repository settings before enabling production CD:
    - `OIDC_SCOPES`
    - `OPENAI_API_KEY`
    - `OPENAI_MODEL`
-   - `S3_ENDPOINT` (optional if using AWS S3 directly)
+   - `S3_ENDPOINT` (leave unset for AWS S3; only set for S3-compatible providers like MinIO/R2)
    - `S3_REGION`
    - `S3_ACCESS_KEY_ID`
    - `S3_SECRET_ACCESS_KEY`
@@ -87,6 +87,15 @@ The CD workflow runs this sequence on the server:
 6. `docker-compose --env-file .env.prod -f deploy/docker-compose.aws-nano.yml up -d api`
 7. `docker image prune -f`
 8. `npm exec nx run @org/web:build` with `VITE_API_BASE_URL=/api`, optionally set `VITE_WS_BASE_URL` to a websocket-capable public API origin, copy `apps/web/dist` into `.vercel/output/static`, add Vercel route `/api/* -> http://$PROD_SSH_HOST/*`, then `npx vercel deploy --prebuilt --prod --public --yes --token="$VERCEL_TOKEN"`
+
+CD secrets note (GitHub Actions):
+
+- The CD workflow expects these GitHub Secrets to be set so it can write the correct S3 configuration into the production server's `.env.prod` (used by docker-compose):
+  - `S3_REGION`
+  - `S3_BUCKET`
+  - `S3_ACCESS_KEY_ID`
+  - `S3_SECRET_ACCESS_KEY`
+- For AWS S3, ensure `S3_ENDPOINT` is not present in `.env.prod`.
 
 Important OIDC production note:
 

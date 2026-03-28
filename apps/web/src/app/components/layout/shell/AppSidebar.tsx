@@ -66,7 +66,9 @@ export function AppSidebar({
                 key={item.key}
                 label={item.label}
                 badgeCount={
-                  item.key === 'notifications' ? unreadNotificationCount : undefined
+                  item.key === 'notifications'
+                    ? unreadNotificationCount
+                    : undefined
                 }
                 to={item.to}
               />

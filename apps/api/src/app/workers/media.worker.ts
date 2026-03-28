@@ -30,8 +30,9 @@ export function startMediaWorker() {
       }).catch(() => ({} as Record<string, string>));
       const durationSecondsRaw = objectMetadata['duration-seconds'];
       const durationSeconds =
-        typeof durationSecondsRaw === 'string'
-          ? Number(durationSecondsRaw)
+        typeof durationSecondsRaw === 'string' &&
+        durationSecondsRaw.trim().length > 0
+          ? Math.round(Number(durationSecondsRaw))
           : undefined;
 
       const shouldReject =

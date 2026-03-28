@@ -1,11 +1,13 @@
 # Goodjob Case Study 1 Plan (Good Job MVP)
 
 ## 1) Goal and target score
+
 Build a production-ready MVP in 3 days that safely supports kudos, live feed, and reward redemption.
 
 Target score: 75+ (Senior threshold is >70).
 
 ## 2) Scope to implement
+
 1. Authenticated users can give kudos with points (10-50), description, core value tag, and media.
 2. Monthly giving budget is 200 points per user and resets on day 1 each month.
 3. Live feed supports emoji reactions, comments, and tagged-user notifications in real time.
@@ -13,6 +15,7 @@ Target score: 75+ (Senior threshold is >70).
 5. Tests for budget logic, self-give prevention, and concurrent redemption.
 
 ## 3) Proposed architecture
+
 - Monorepo: `apps/web`, `apps/api`, `packages/shared`.
 - Frontend: React + TypeScript + Tailwind + React Query.
 - Backend: Node.js + TypeScript + Fastify (or NestJS/Express if preferred).
@@ -22,6 +25,7 @@ Target score: 75+ (Senior threshold is >70).
 - Background jobs: BullMQ (Redis) for video processing/transcoding metadata.
 
 ## 4) Data model (minimum)
+
 - `users(id, email, display_name, created_at)`
 - `wallets(user_id, available_points, updated_at)`
 - `budget_ledger(id, user_id, month_key, delta_points, reason, ref_type, ref_id, created_at)`
@@ -34,6 +38,7 @@ Target score: 75+ (Senior threshold is >70).
 - `point_ledger(id, user_id, delta_points, direction, reason, ref_type, ref_id, created_at)`
 
 ## 5) Critical integrity rules
+
 1. No self-kudos.
 2. Kudo points must be within 10-50.
 3. Monthly give budget enforced by DB transaction + row lock on budget/wallet rows.
@@ -41,6 +46,7 @@ Target score: 75+ (Senior threshold is >70).
 5. All point changes recorded in immutable ledger rows.
 
 ## 6) API slice
+
 - `POST /kudos`
 - `GET /feed?cursor=...`
 - `POST /kudos/:id/reactions`
@@ -50,37 +56,46 @@ Target score: 75+ (Senior threshold is >70).
 - `GET /notifications/stream` (WebSocket preferred)
 
 ## 7) Task-based execution plan
+
 ### Task 1: Foundation setup
+
 - Bootstrap monorepo, auth stub, DB schema, migrations.
 
 ### Task 2: Kudos core flow
+
 - Implement kudos write path with transaction + budget checks.
 - Build basic web form and feed list.
 
 ### Task 3: Engagement and real-time
+
 - Add reactions/comments + real-time notification channel.
 
 ### Task 4: Rewards and media
+
 - Build reward catalog and atomic redemption flow.
 - Add media upload path (async processing; no API blocking).
 
 ### Task 5: Quality and delivery
+
 - Tests (unit + integration + concurrency).
 - Docker compose, CI pipeline, README, `.env.example`.
 - UI polish: loading states, responsive layouts, errors.
 
 ## 8) Test plan (must-have)
+
 - Unit: budget reset, points validation, no self-kudo.
 - Integration: give-kudo persists records + budget ledger update.
 - Concurrency: parallel redeem requests only produce one successful spend.
 - Security smoke: rate limit, CSRF, auth checks on all mutation endpoints.
 
 ## 9) Risks and mitigation
+
 - Race conditions: use DB locks, unique constraints, idempotency tokens.
 - Video processing latency: async queue + background worker.
 - Feed performance: keyset pagination and minimal joins.
 
 ## 10) Deliverables checklist
+
 1. Source code with clear frontend/backend separation.
 2. Professional commits.
 3. README with setup, architecture rationale, env vars.

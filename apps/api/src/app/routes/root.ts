@@ -1,6 +1,9 @@
 import { FastifyInstance } from 'fastify';
 import { and, asc, desc, eq, ilike, inArray, lt, or, sql } from 'drizzle-orm';
-import { listUsersQuerySchema, listWalletTransactionsQuerySchema } from '@org/shared';
+import {
+  listUsersQuerySchema,
+  listWalletTransactionsQuerySchema,
+} from '@org/shared';
 import { db } from '../db/client.js';
 import {
   budgetLedger,
@@ -185,7 +188,9 @@ export default async function (fastify: FastifyInstance) {
 
       const kudoUserIds = Array.from(
         new Set(
-          kudoRows.flatMap((row) => [row.senderId, row.receiverId]).filter(Boolean)
+          kudoRows
+            .flatMap((row) => [row.senderId, row.receiverId])
+            .filter(Boolean)
         )
       );
 
@@ -201,7 +206,9 @@ export default async function (fastify: FastifyInstance) {
           : [];
 
       const kudoById = new Map(kudoRows.map((row) => [row.id, row]));
-      const userNameById = new Map(kudoUsers.map((row) => [row.id, row.displayName]));
+      const userNameById = new Map(
+        kudoUsers.map((row) => [row.id, row.displayName])
+      );
 
       const redemptionRows =
         redemptionIds.length > 0
@@ -229,8 +236,12 @@ export default async function (fastify: FastifyInstance) {
               .where(inArray(rewards.id, rewardIds))
           : [];
 
-      const redemptionById = new Map(redemptionRows.map((row) => [row.id, row]));
-      const rewardNameById = new Map(rewardRows.map((row) => [row.id, row.name]));
+      const redemptionById = new Map(
+        redemptionRows.map((row) => [row.id, row])
+      );
+      const rewardNameById = new Map(
+        rewardRows.map((row) => [row.id, row.name])
+      );
 
       const enrichedItems = items.map((row) => {
         let detail: string | null = null;
@@ -245,13 +256,17 @@ export default async function (fastify: FastifyInstance) {
 
         if (row.reason === 'kudo_received' && row.refType === 'kudo') {
           const kudo = kudoById.get(row.refId);
-          const senderName = kudo ? userNameById.get(kudo.senderId) ?? null : null;
+          const senderName = kudo
+            ? userNameById.get(kudo.senderId) ?? null
+            : null;
           detail = senderName ? `From: ${senderName}` : null;
         }
 
         if (row.reason === 'kudo_sent' && row.refType === 'kudo') {
           const kudo = kudoById.get(row.refId);
-          const receiverName = kudo ? userNameById.get(kudo.receiverId) ?? null : null;
+          const receiverName = kudo
+            ? userNameById.get(kudo.receiverId) ?? null
+            : null;
           detail = receiverName ? `To: ${receiverName}` : null;
         }
 
@@ -332,5 +347,4 @@ export default async function (fastify: FastifyInstance) {
       });
     }
   );
-
 }

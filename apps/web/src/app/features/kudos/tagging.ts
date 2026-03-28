@@ -134,9 +134,10 @@ export function replaceTagAtCaret(text: string, caret: number, tag: string) {
 
   const tagText = `#${sanitized}`;
   const suffix = text[end] === ' ' || end === text.length ? '' : ' ';
-  const nextValue = `${text.slice(0, query.start)}${tagText}${suffix}${text.slice(
-    end
-  )}`;
+  const nextValue = `${text.slice(
+    0,
+    query.start
+  )}${tagText}${suffix}${text.slice(end)}`;
   const nextCaret = query.start + tagText.length + suffix.length;
 
   return { nextValue, nextCaret };

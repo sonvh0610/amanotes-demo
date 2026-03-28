@@ -3,3 +3,13 @@
 /coverage
 /.nx/cache
 /.nx/workspace-data
+
+# Generated build outputs (workspace-wide)
+**/dist/**
+**/out-tsc/**
+tmp/**
+.vercel/**
+
+# Codex/agent assets (read-only in this environment)
+.agents/**
+.codex/**

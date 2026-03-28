@@ -133,7 +133,12 @@ function getIconName(children: ReactNode, dataIcon?: string) {
   return '';
 }
 
-export function AppIcon({ children, className = '', style, ...rest }: AppIconProps) {
+export function AppIcon({
+  children,
+  className = '',
+  style,
+  ...rest
+}: AppIconProps) {
   const iconName = getIconName(children, rest['data-icon']);
   const Icon = ICONS[iconName as keyof typeof ICONS] ?? CircleHelp;
   const joinedClassName = sanitizeClassName(className);

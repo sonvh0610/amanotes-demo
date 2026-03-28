@@ -13,9 +13,9 @@ export function TopRecognizersLeaderboard({
   monthLabel,
   loading,
 }: TopRecognizersLeaderboardProps) {
-  const [failedAvatarIds, setFailedAvatarIds] = useState<Record<string, boolean>>(
-    {}
-  );
+  const [failedAvatarIds, setFailedAvatarIds] = useState<
+    Record<string, boolean>
+  >({});
 
   const markAvatarFailed = (userId: string) => {
     setFailedAvatarIds((prev) => {

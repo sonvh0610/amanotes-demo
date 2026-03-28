@@ -1,7 +1,10 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { Login } from './pages/Login';
 import { GlobalShell } from './components/layout/shell/GlobalShell';
-import { ProtectedRoute, PublicRoute } from './components/common/ProtectedRoute';
+import {
+  ProtectedRoute,
+  PublicRoute,
+} from './components/common/ProtectedRoute';
 
 import Dashboard from './pages/Dashboard';
 import SendKudos from './pages/SendKudos';

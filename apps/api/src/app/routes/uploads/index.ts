@@ -71,14 +71,18 @@ export default async function uploadRoutes(fastify: FastifyInstance) {
 
       try {
         const key = makeStorageKey(request.user!.id, parsed.data.fileName);
+        const durationSeconds =
+          typeof parsed.data.durationSeconds === 'number'
+            ? Math.round(parsed.data.durationSeconds)
+            : undefined;
+
         const uploadUrl = await createPresignedUploadUrl({
           key,
           mimeType: parsed.data.mimeType,
           metadata:
-            parsed.data.mediaType === 'video' &&
-            typeof parsed.data.durationSeconds === 'number'
+            parsed.data.mediaType === 'video' && durationSeconds !== undefined
               ? {
-                  'duration-seconds': String(parsed.data.durationSeconds),
+                  'duration-seconds': String(durationSeconds),
                 }
               : undefined,
         });
@@ -90,7 +94,7 @@ export default async function uploadRoutes(fastify: FastifyInstance) {
             mediaType: parsed.data.mediaType,
             mimeType: parsed.data.mimeType,
             fileSizeBytes: parsed.data.fileSizeBytes,
-            durationSeconds: parsed.data.durationSeconds,
+            durationSeconds,
             storageKey: key,
             publicUrl: makeObjectPublicUrl(key),
             status: 'pending',
@@ -145,7 +149,7 @@ export default async function uploadRoutes(fastify: FastifyInstance) {
       );
       const durationSeconds =
         typeof durationValue === 'string' && durationValue.trim().length > 0
-          ? Number(durationValue)
+          ? Math.round(Number(durationValue))
           : undefined;
 
       await uploadObject({

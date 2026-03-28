@@ -46,8 +46,12 @@ export function RewardCard({
 
       <div className="space-y-2 p-4">
         <h2 className="text-base font-semibold text-on-surface">{item.name}</h2>
-        <p className="text-sm text-on-surface-variant">Points spend: {item.costPoints}</p>
-        <p className="text-sm text-on-surface-variant">Remain stock: {item.stock}</p>
+        <p className="text-sm text-on-surface-variant">
+          Points spend: {item.costPoints}
+        </p>
+        <p className="text-sm text-on-surface-variant">
+          Remain stock: {item.stock}
+        </p>
         <button
           className="mt-2 w-full cursor-pointer rounded-md bg-primary px-3 py-2 text-sm font-semibold text-on-primary transition-colors hover:bg-primary-dim disabled:cursor-not-allowed disabled:opacity-50"
           disabled={item.stock <= 0 || redeeming}

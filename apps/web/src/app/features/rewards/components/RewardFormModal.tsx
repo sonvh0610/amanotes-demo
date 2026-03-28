@@ -89,8 +89,12 @@ export function RewardFormModal({
               }`}
             >
               <input {...getThumbnailDropInputProps()} />
-              <p className="text-sm text-on-surface">Drop image here for thumbnail</p>
-              <p className="mt-1 text-xs text-on-surface-variant">PNG/JPG/WebP up to 1MB</p>
+              <p className="text-sm text-on-surface">
+                Drop image here for thumbnail
+              </p>
+              <p className="mt-1 text-xs text-on-surface-variant">
+                PNG/JPG/WebP up to 1MB
+              </p>
               <button
                 className="mt-3 cursor-pointer rounded-full bg-primary px-3 py-1.5 text-xs font-bold text-on-primary disabled:cursor-not-allowed disabled:opacity-50"
                 disabled={uploadingThumbnail}
@@ -157,7 +161,9 @@ export function RewardFormModal({
             </label>
           </div>
 
-          {formError ? <p className="text-sm text-red-600">{formError}</p> : null}
+          {formError ? (
+            <p className="text-sm text-red-600">{formError}</p>
+          ) : null}
 
           <div className="flex justify-end gap-2 pt-2">
             <button

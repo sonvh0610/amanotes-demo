@@ -18,10 +18,17 @@ export function RedeemConfirmModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
       <div className="w-full max-w-md rounded-2xl bg-surface-container-lowest p-6 shadow-xl">
-        <h2 className="text-xl font-bold text-on-surface">Confirm Redemption</h2>
+        <h2 className="text-xl font-bold text-on-surface">
+          Confirm Redemption
+        </h2>
         <p className="mt-2 text-sm text-on-surface-variant">
-          Redeem <span className="font-semibold text-on-surface">{reward.name}</span> for{' '}
-          <span className="font-semibold text-on-surface">{reward.costPoints}</span> points?
+          Redeem{' '}
+          <span className="font-semibold text-on-surface">{reward.name}</span>{' '}
+          for{' '}
+          <span className="font-semibold text-on-surface">
+            {reward.costPoints}
+          </span>{' '}
+          points?
         </p>
 
         <div className="mt-6 flex justify-end gap-2">

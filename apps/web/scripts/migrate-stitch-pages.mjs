@@ -3,7 +3,8 @@ import path from 'path';
 
 const PAGES_DIR = path.resolve(process.cwd(), 'apps/web/src/app/pages');
 
-const RAW_HTML_REGEX = /dangerouslySetInnerHTML=\{\{\s*__html:\s*`([\s\S]*?)`\s*\}\}\s*\/>/m;
+const RAW_HTML_REGEX =
+  /dangerouslySetInnerHTML=\{\{\s*__html:\s*`([\s\S]*?)`\s*\}\}\s*\/>/m;
 
 function toCamelCase(cssProp) {
   return cssProp.replace(/-([a-z])/g, (_, c) => c.toUpperCase());
@@ -60,7 +61,10 @@ function htmlToJsx(html) {
   jsx = jsx.replace(/\sautocomplete=/g, ' autoComplete=');
   jsx = jsx.replace(/\sautofocus(?=[\s>])/g, ' autoFocus');
 
-  jsx = jsx.replace(/\sstyle="([^"]*)"/g, (_, cssText) => ` style=${cssToJsxStyle(cssText)}`);
+  jsx = jsx.replace(
+    /\sstyle="([^"]*)"/g,
+    (_, cssText) => ` style=${cssToJsxStyle(cssText)}`
+  );
 
   jsx = jsx
     .split('\n')
@@ -87,7 +91,9 @@ function buildComponentSource(componentName, jsxMarkup) {
 }
 
 async function run() {
-  const files = (await readdir(PAGES_DIR)).filter((file) => file.endsWith('.tsx'));
+  const files = (await readdir(PAGES_DIR)).filter((file) =>
+    file.endsWith('.tsx')
+  );
 
   let convertedCount = 0;
 

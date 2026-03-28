@@ -2,7 +2,10 @@ import { useEffect, useMemo, useState } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import { AppSidebar } from './AppSidebar';
 import { AppIcon } from '../../ui/AppIcon';
-import { RealtimeNotificationsProvider, useRealtimeNotifications } from '../../../features/notifications/context/RealtimeNotificationsContext';
+import {
+  RealtimeNotificationsProvider,
+  useRealtimeNotifications,
+} from '../../../features/notifications/context/RealtimeNotificationsContext';
 
 const COLLAPSE_KEY = 'app_shell_sidebar_collapsed';
 

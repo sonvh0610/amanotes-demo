@@ -51,7 +51,9 @@ export function KudosMediaDropzone({
 
   const onDrop = (acceptedFiles: File[]) => {
     const deduped = Array.from(
-      new Map([...files, ...acceptedFiles].map((file) => [fileKey(file), file])).values()
+      new Map(
+        [...files, ...acceptedFiles].map((file) => [fileKey(file), file])
+      ).values()
     );
 
     if (deduped.length > maxFiles) {
@@ -93,7 +95,8 @@ export function KudosMediaDropzone({
           Drag and drop images/videos here
         </p>
         <p className="mt-1 text-xs text-on-surface-variant">
-          Up to {maxFiles} files. Image preview enabled. Video preview not shown.
+          Up to {maxFiles} files. Image preview enabled. Video preview not
+          shown.
         </p>
         <button
           type="button"

@@ -84,7 +84,9 @@ export function useKudoTagSuggestions({
 
     if (event.key === 'ArrowUp') {
       event.preventDefault();
-      setSelectedIndex((prev) => (prev - 1 + suggestions.length) % suggestions.length);
+      setSelectedIndex(
+        (prev) => (prev - 1 + suggestions.length) % suggestions.length
+      );
       return;
     }
 

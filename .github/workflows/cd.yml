@@ -86,8 +86,8 @@ jobs:
             -e OIDC_CLIENT_SECRET=test-client-secret \
             -e OIDC_REDIRECT_URI=https://example.com/api/auth/oidc/callback \
             -e S3_REGION=ap-southeast-1 \
-            -e S3_ACCESS_KEY_ID=minioadmin \
-            -e S3_SECRET_ACCESS_KEY=minioadmin \
+            -e S3_ACCESS_KEY_ID=test-access-key \
+            -e S3_SECRET_ACCESS_KEY=test-secret-key \
             -e S3_BUCKET=goodjob-media \
             ghcr.io/${{ steps.owner.outputs.owner_lc }}/goodjob-api:${{ steps.meta.outputs.image_tag }} \
             node -e "console.log('api image boots')"
@@ -107,12 +107,16 @@ jobs:
           IMAGE_TAG: ${{ needs.build-and-push-api-image.outputs.image_tag }}
           GHCR_USERNAME: ${{ secrets.GHCR_USERNAME }}
           GHCR_READ_TOKEN: ${{ secrets.GHCR_READ_TOKEN }}
+          S3_REGION: ${{ secrets.S3_REGION }}
+          S3_BUCKET: ${{ secrets.S3_BUCKET }}
+          S3_ACCESS_KEY_ID: ${{ secrets.S3_ACCESS_KEY_ID }}
+          S3_SECRET_ACCESS_KEY: ${{ secrets.S3_SECRET_ACCESS_KEY }}
         with:
           host: ${{ secrets.PROD_SSH_HOST }}
           username: ${{ secrets.PROD_SSH_USER }}
           key: ${{ secrets.PROD_SSH_PRIVATE_KEY }}
           port: ${{ secrets.PROD_SSH_PORT }}
-          envs: GHCR_OWNER,IMAGE_TAG,GHCR_USERNAME,GHCR_READ_TOKEN
+          envs: GHCR_OWNER,IMAGE_TAG,GHCR_USERNAME,GHCR_READ_TOKEN,S3_REGION,S3_BUCKET,S3_ACCESS_KEY_ID,S3_SECRET_ACCESS_KEY
           script_stop: true
           script: |
             set -euo pipefail
@@ -137,6 +141,41 @@ jobs:
             else
               echo "No compose file found in ${PWD}" >&2
               exit 1
+            fi
+
+            : "${S3_REGION:?Missing S3_REGION GitHub secret}"
+            : "${S3_BUCKET:?Missing S3_BUCKET GitHub secret}"
+            : "${S3_ACCESS_KEY_ID:?Missing S3_ACCESS_KEY_ID GitHub secret}"
+            : "${S3_SECRET_ACCESS_KEY:?Missing S3_SECRET_ACCESS_KEY GitHub secret}"
+
+            umask 077
+            touch .env.prod
+            chmod 600 .env.prod || true
+
+            upsert_env() {
+              local key="$1"
+              local value="$2"
+              local tmpfile
+              tmpfile="$(mktemp)"
+              if [ -f .env.prod ]; then
+                grep -v "^${key}=" .env.prod > "$tmpfile" || true
+              fi
+              printf '%s=%s\n' "$key" "$value" >> "$tmpfile"
+              mv "$tmpfile" .env.prod
+            }
+
+            # Always run API with production env semantics.
+            upsert_env NODE_ENV production
+            upsert_env S3_REGION "$S3_REGION"
+            upsert_env S3_BUCKET "$S3_BUCKET"
+            upsert_env S3_ACCESS_KEY_ID "$S3_ACCESS_KEY_ID"
+            upsert_env S3_SECRET_ACCESS_KEY "$S3_SECRET_ACCESS_KEY"
+
+            # AWS S3 should not use custom endpoints; keep S3_ENDPOINT unset in prod.
+            if grep -q '^S3_ENDPOINT=' .env.prod; then
+              tmpfile="$(mktemp)"
+              grep -v '^S3_ENDPOINT=' .env.prod > "$tmpfile" || true
+              mv "$tmpfile" .env.prod
             fi
 
             echo "$GHCR_READ_TOKEN" | docker login ghcr.io -u "$GHCR_USERNAME" --password-stdin

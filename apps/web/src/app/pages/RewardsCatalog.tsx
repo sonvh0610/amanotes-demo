@@ -53,7 +53,9 @@ export default function RewardsCatalog() {
             {state.successMessage}
           </p>
         ) : null}
-        {state.error ? <p className="mt-3 text-sm text-red-600">{state.error}</p> : null}
+        {state.error ? (
+          <p className="mt-3 text-sm text-red-600">{state.error}</p>
+        ) : null}
 
         <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {state.items.map((item) => (
@@ -69,11 +71,15 @@ export default function RewardsCatalog() {
         </div>
 
         {state.items.length === 0 ? (
-          <p className="mt-6 text-sm text-on-surface-variant">No rewards available yet.</p>
+          <p className="mt-6 text-sm text-on-surface-variant">
+            No rewards available yet.
+          </p>
         ) : null}
         {state.hasMore ? <div className="mt-6 h-8" ref={loadMoreRef} /> : null}
         {state.loadingMore ? (
-          <p className="mt-2 text-sm text-on-surface-variant">Loading more rewards...</p>
+          <p className="mt-2 text-sm text-on-surface-variant">
+            Loading more rewards...
+          </p>
         ) : null}
       </div>
 

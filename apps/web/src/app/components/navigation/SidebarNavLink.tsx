@@ -55,7 +55,9 @@ export function SidebarNavLink({
           {badgeCount && badgeCount > 0 ? (
             <span
               className={`ml-auto inline-flex min-w-6 items-center justify-center rounded-full px-1.5 py-0.5 text-[11px] font-bold ${
-                active ? 'bg-on-primary text-primary' : 'bg-primary text-on-primary'
+                active
+                  ? 'bg-on-primary text-primary'
+                  : 'bg-primary text-on-primary'
               }`}
             >
               {badgeCount > 99 ? '99+' : badgeCount}
