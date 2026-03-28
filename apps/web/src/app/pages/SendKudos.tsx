@@ -29,6 +29,7 @@ export default function SendKudos() {
     onTextareaChange,
     onTextareaSelectionChange,
     onTextareaKeyDown,
+    onTextareaBlur,
     applySuggestion,
   } = useKudoTagSuggestions({
     value: description,
@@ -139,6 +140,7 @@ export default function SendKudos() {
                   onTextareaSelectionChange(event.currentTarget.selectionStart ?? 0)
                 }
                 onKeyDown={onTextareaKeyDown}
+                onBlur={onTextareaBlur}
                 required
               />
               {showSuggestions ? (

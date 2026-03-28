@@ -2,6 +2,7 @@ import type {
   CreateCommentBody,
   CreateKudoBody,
   FeedResponse,
+  KudoDetailResponse,
   KudoUserOption,
   TopRecognizersResponse,
 } from '@org/shared';
@@ -40,6 +41,11 @@ export async function fetchFeed(cursor?: string | null) {
   );
 }
 
+export async function fetchKudoDetail(kudoId: string) {
+  const result = await apiRequest<KudoDetailResponse>(`/feed/${kudoId}`);
+  return result.item;
+}
+
 export async function fetchTopRecognizers(limit = 5) {
   const params = new URLSearchParams();
   params.set('limit', String(limit));
@@ -64,5 +70,16 @@ export async function createComment(
       text: input.text,
       mediaAssetIds: input.mediaAssetIds,
     },
+  });
+}
+
+export async function fetchKudoWatchStatus(kudoId: string) {
+  return apiRequest<{ watched: boolean }>(`/kudos/${kudoId}/watch`);
+}
+
+export async function setKudoWatchStatus(kudoId: string, watched: boolean) {
+  return apiRequest<{ watched: boolean }>(`/kudos/${kudoId}/watch`, {
+    method: 'POST',
+    body: { watched },
   });
 }

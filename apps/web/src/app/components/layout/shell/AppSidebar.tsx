@@ -10,6 +10,7 @@ type AppSidebarProps = {
   activeKey: NavItem['key'] | null;
   collapsed: boolean;
   mobileOpen: boolean;
+  unreadNotificationCount: number;
   onCloseMobile: () => void;
   onToggleDesktopSidebar: () => void;
 };
@@ -18,6 +19,7 @@ export function AppSidebar({
   activeKey,
   collapsed,
   mobileOpen,
+  unreadNotificationCount,
   onCloseMobile,
   onToggleDesktopSidebar,
 }: AppSidebarProps) {
@@ -63,6 +65,9 @@ export function AppSidebar({
                 iconName={item.icon}
                 key={item.key}
                 label={item.label}
+                badgeCount={
+                  item.key === 'notifications' ? unreadNotificationCount : undefined
+                }
                 to={item.to}
               />
             ))}
@@ -155,6 +160,11 @@ export function AppSidebar({
                     iconName={item.icon}
                     key={item.key}
                     label={item.label}
+                    badgeCount={
+                      item.key === 'notifications'
+                        ? unreadNotificationCount
+                        : undefined
+                    }
                     onClick={onCloseMobile}
                     to={item.to}
                   />

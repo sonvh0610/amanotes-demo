@@ -3,7 +3,12 @@ import { wsUrl } from '../../../lib/api';
 import { uploadManyMedia } from '../../../lib/media';
 import { getUserFacingError } from '../../../lib/user-errors';
 import type { FeedItem, KudoMedia } from '@org/shared';
-import { createComment, fetchFeed, toggleReaction } from '../api';
+import {
+  createComment,
+  fetchFeed,
+  setKudoWatchStatus,
+  toggleReaction,
+} from '../api';
 import { extractUniqueTags, normalizeTag } from '../tagging';
 
 type ViewerState = {
@@ -100,6 +105,30 @@ export function useKudoFeed() {
     }
   };
 
+  const toggleWatch = async (kudoId: string, watched: boolean) => {
+    setItems((prev) =>
+      prev.map((item) =>
+        item.id === kudoId ? { ...item, watchedByViewer: watched } : item
+      )
+    );
+    try {
+      await setKudoWatchStatus(kudoId, watched);
+    } catch (requestError) {
+      setItems((prev) =>
+        prev.map((item) =>
+          item.id === kudoId ? { ...item, watchedByViewer: !watched } : item
+        )
+      );
+      setError(
+        getUserFacingError(requestError, {
+          context: 'feed-load',
+          fallback:
+            'Unable to update feed notification settings right now. Please try again.',
+        })
+      );
+    }
+  };
+
   const openViewer = (medias: KudoMedia[], index: number) => {
     setViewer({ medias, index });
   };
@@ -167,6 +196,7 @@ export function useKudoFeed() {
     loadFeed,
     submitComment,
     onToggleReaction,
+    toggleWatch,
     openViewer,
     closeViewer,
     viewPrev,

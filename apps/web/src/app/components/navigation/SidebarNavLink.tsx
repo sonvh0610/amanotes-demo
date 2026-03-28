@@ -4,6 +4,7 @@ import { AppIcon } from '../ui/AppIcon';
 
 type SidebarNavLinkProps = {
   active?: boolean;
+  badgeCount?: number;
   collapsed?: boolean;
   className?: string;
   href?: string;
@@ -19,6 +20,7 @@ type SidebarNavLinkProps = {
 
 export function SidebarNavLink({
   active = false,
+  badgeCount,
   collapsed = false,
   className = '',
   href = '#',
@@ -32,7 +34,7 @@ export function SidebarNavLink({
   to,
 }: SidebarNavLinkProps) {
   const mergedClassName =
-    `flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-semibold transition-colors ${
+    `relative flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-semibold transition-colors ${
       active
         ? 'bg-primary text-on-primary'
         : 'text-on-surface hover:bg-primary hover:text-on-primary'
@@ -47,7 +49,25 @@ export function SidebarNavLink({
       >
         {iconName}
       </AppIcon>
-      {collapsed ? null : <span className={labelClassName}>{label}</span>}
+      {collapsed ? null : (
+        <>
+          <span className={labelClassName}>{label}</span>
+          {badgeCount && badgeCount > 0 ? (
+            <span
+              className={`ml-auto inline-flex min-w-6 items-center justify-center rounded-full px-1.5 py-0.5 text-[11px] font-bold ${
+                active ? 'bg-on-primary text-primary' : 'bg-primary text-on-primary'
+              }`}
+            >
+              {badgeCount > 99 ? '99+' : badgeCount}
+            </span>
+          ) : null}
+        </>
+      )}
+      {collapsed && badgeCount && badgeCount > 0 ? (
+        <span className="absolute right-2 top-2 inline-flex min-w-5 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-bold text-on-primary">
+          {badgeCount > 99 ? '99+' : badgeCount}
+        </span>
+      ) : null}
     </>
   );
 

@@ -218,6 +218,29 @@ export const kudoMediaAssets = pgTable(
   })
 );
 
+export const kudoWatchers = pgTable(
+  'kudo_watchers',
+  {
+    kudoId: uuid('kudo_id')
+      .notNull()
+      .references(() => kudos.id, { onDelete: 'cascade' }),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => ({
+    uniqueKudoWatcher: unique('kudo_watchers_unique').on(
+      table.kudoId,
+      table.userId
+    ),
+    kudoWatcherKudoIdx: index('kudo_watchers_kudo_idx').on(table.kudoId),
+    kudoWatcherUserIdx: index('kudo_watchers_user_idx').on(table.userId),
+  })
+);
+
 export const monthlyGivingWallets = pgTable(
   'monthly_giving_wallets',
   {

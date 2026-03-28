@@ -1,10 +1,11 @@
 import { FastifyInstance } from 'fastify';
 import { and, asc, desc, eq, gte, inArray, lt, or, sql } from 'drizzle-orm';
-import { listFeedQuerySchema, listTopRecognizersQuerySchema } from '@org/shared';
+import { listFeedQuerySchema, listTopRecognizersQuerySchema, uuidSchema } from '@org/shared';
 import { db } from '../../db/client.js';
 import {
   commentMediaAssets,
   comments,
+  kudoWatchers,
   kudoMediaAssets,
   kudos,
   mediaAssets,
@@ -42,84 +43,38 @@ function encodeCursor(createdAt: Date, id: string): string {
 }
 
 export default async function feedRoutes(fastify: FastifyInstance) {
-  fastify.get(
-    '/top-recognizers',
-    { preHandler: fastify.requireAuth },
-    async (request, reply) => {
-      const parsed = listTopRecognizersQuerySchema.safeParse(request.query);
-      if (!parsed.success) {
-        return reply.status(400).send({ error: parsed.error.flatten() });
-      }
+  const hydrateFeedItems = async (
+    rows: Array<{
+      id: string;
+      senderId: string;
+      receiverId: string;
+      points: number;
+      description: string;
+      coreValue: string | null;
+      mediaAssetId: string | null;
+      mediaUrl: string | null;
+      mediaStorageKey: string | null;
+      mediaType: 'image' | 'video' | null;
+      createdAt: Date;
+      senderName: string;
+      senderAvatarUrl: string | null;
+    }>,
+    viewerUserId: string,
+    recentLimit = 3
+  ) => {
+    const kudoIds = rows.map((item) => item.id);
 
-      const monthStart = new Date(`${monthKeyFromDate()}-01T00:00:00.000Z`);
-      const rows = await db
-        .select({
-          userId: users.id,
-          displayName: users.displayName,
-          avatarUrl: users.avatarUrl,
-          kudosSent: sql<number>`count(${kudos.id})::int`,
-          pointsGiven: sql<number>`coalesce(sum(${kudos.points}), 0)::int`,
-        })
-        .from(kudos)
-        .innerJoin(users, eq(kudos.senderId, users.id))
-        .where(gte(kudos.createdAt, monthStart))
-        .groupBy(users.id, users.displayName, users.avatarUrl)
-        .orderBy(
-          desc(sql`count(${kudos.id})`),
-          desc(sql`coalesce(sum(${kudos.points}), 0)`),
-          users.displayName
-        )
-        .limit(parsed.data.limit);
-
-      return reply.send({ items: rows });
-    }
-  );
-
-  fastify.get('/', { preHandler: fastify.requireAuth }, async (request, reply) => {
-    const parsed = listFeedQuerySchema.safeParse(request.query);
-    if (!parsed.success) {
-      return reply.status(400).send({ error: parsed.error.flatten() });
-    }
-
-    const { limit } = parsed.data;
-    const cursor = decodeCursor(parsed.data.cursor);
-    const rows = await db
-      .select({
-        id: kudos.id,
-        senderId: kudos.senderId,
-        receiverId: kudos.receiverId,
-        points: kudos.points,
-        description: kudos.description,
-        coreValue: kudos.coreValue,
-        mediaAssetId: kudos.mediaAssetId,
-        mediaUrl: mediaAssets.publicUrl,
-        mediaStorageKey: mediaAssets.storageKey,
-        mediaType: mediaAssets.mediaType,
-        createdAt: kudos.createdAt,
-        senderName: users.displayName,
-        senderAvatarUrl: users.avatarUrl,
-      })
-      .from(kudos)
-      .innerJoin(users, eq(kudos.senderId, users.id))
-      .leftJoin(mediaAssets, eq(kudos.mediaAssetId, mediaAssets.id))
-      .where(
-        cursor
-          ? or(
-              lt(kudos.createdAt, new Date(cursor.createdAt)),
-              and(eq(kudos.createdAt, new Date(cursor.createdAt)), lt(kudos.id, cursor.id))
-            )
-          : undefined
-      )
-      .orderBy(desc(kudos.createdAt), desc(kudos.id))
-      .limit(limit + 1);
-
-    const hasMore = rows.length > limit;
-    const items = hasMore ? rows.slice(0, limit) : rows;
-    const kudoIds = items.map((item) => item.id);
-
-    const [mediaRows, reactionCounts, userReactions, commentCounts, recentReactions, recentComments] =
+    const [
+      mediaRows,
+      reactionCounts,
+      userReactions,
+      commentCounts,
+      recentReactions,
+      recentComments,
+      watchedRows,
+    ] =
       kudoIds.length === 0
-        ? [[], [], [], [], [], []]
+        ? [[], [], [], [], [], [], []]
         : await Promise.all([
             db
               .select({
@@ -153,10 +108,7 @@ export default async function feedRoutes(fastify: FastifyInstance) {
               })
               .from(reactions)
               .where(
-                and(
-                  inArray(reactions.kudoId, kudoIds),
-                  eq(reactions.userId, request.user!.id)
-                )
+                and(inArray(reactions.kudoId, kudoIds), eq(reactions.userId, viewerUserId))
               ),
             db
               .select({
@@ -195,13 +147,24 @@ export default async function feedRoutes(fastify: FastifyInstance) {
               .where(inArray(comments.kudoId, kudoIds))
               .orderBy(desc(comments.createdAt))
               .limit(300),
+            db
+              .select({
+                kudoId: kudoWatchers.kudoId,
+              })
+              .from(kudoWatchers)
+              .where(
+                and(
+                  inArray(kudoWatchers.kudoId, kudoIds),
+                  eq(kudoWatchers.userId, viewerUserId)
+                )
+              ),
           ]);
 
     const allStorageKeys = Array.from(
       new Set(
         [
           ...mediaRows.map((row) => row.mediaStorageKey),
-          ...items.map((item) => item.mediaStorageKey),
+          ...rows.map((item) => item.mediaStorageKey),
         ].filter((value): value is string => Boolean(value))
       )
     );
@@ -255,6 +218,8 @@ export default async function feedRoutes(fastify: FastifyInstance) {
       commentCountByKudoId.set(row.kudoId, row.count);
     }
 
+    const watchedKudoIds = new Set(watchedRows.map((row) => row.kudoId));
+
     const recentReactionsByKudoId = new Map<
       string,
       {
@@ -267,7 +232,7 @@ export default async function feedRoutes(fastify: FastifyInstance) {
     >();
     for (const row of recentReactions) {
       const list = recentReactionsByKudoId.get(row.kudoId) ?? [];
-      if (list.length < 3) {
+      if (list.length < recentLimit) {
         list.push(row);
       }
       recentReactionsByKudoId.set(row.kudoId, list);
@@ -291,7 +256,7 @@ export default async function feedRoutes(fastify: FastifyInstance) {
     >();
     for (const row of recentComments) {
       const list = recentCommentsByKudoId.get(row.kudoId) ?? [];
-      if (list.length < 3) {
+      if (list.length < recentLimit) {
         list.push({
           ...row,
           medias: [],
@@ -366,7 +331,7 @@ export default async function feedRoutes(fastify: FastifyInstance) {
       }
     }
 
-    const enrichedItems = items.map((item) => ({
+    return rows.map((item) => ({
       ...item,
       medias:
         mediasByKudoId.get(item.id) ??
@@ -388,7 +353,84 @@ export default async function feedRoutes(fastify: FastifyInstance) {
         recentReactions: recentReactionsByKudoId.get(item.id) ?? [],
         recentComments: recentCommentsByKudoId.get(item.id) ?? [],
       },
+      watchedByViewer: watchedKudoIds.has(item.id),
     }));
+  };
+
+  fastify.get(
+    '/top-recognizers',
+    { preHandler: fastify.requireAuth },
+    async (request, reply) => {
+      const parsed = listTopRecognizersQuerySchema.safeParse(request.query);
+      if (!parsed.success) {
+        return reply.status(400).send({ error: parsed.error.flatten() });
+      }
+
+      const monthStart = new Date(`${monthKeyFromDate()}-01T00:00:00.000Z`);
+      const rows = await db
+        .select({
+          userId: users.id,
+          displayName: users.displayName,
+          avatarUrl: users.avatarUrl,
+          kudosSent: sql<number>`count(${kudos.id})::int`,
+          pointsGiven: sql<number>`coalesce(sum(${kudos.points}), 0)::int`,
+        })
+        .from(kudos)
+        .innerJoin(users, eq(kudos.senderId, users.id))
+        .where(gte(kudos.createdAt, monthStart))
+        .groupBy(users.id, users.displayName, users.avatarUrl)
+        .orderBy(
+          desc(sql`count(${kudos.id})`),
+          desc(sql`coalesce(sum(${kudos.points}), 0)`),
+          users.displayName
+        )
+        .limit(parsed.data.limit);
+
+      return reply.send({ items: rows });
+    }
+  );
+
+  fastify.get('/', { preHandler: fastify.requireAuth }, async (request, reply) => {
+    const parsed = listFeedQuerySchema.safeParse(request.query);
+    if (!parsed.success) {
+      return reply.status(400).send({ error: parsed.error.flatten() });
+    }
+
+    const { limit } = parsed.data;
+    const cursor = decodeCursor(parsed.data.cursor);
+    const rows = await db
+      .select({
+        id: kudos.id,
+        senderId: kudos.senderId,
+        receiverId: kudos.receiverId,
+        points: kudos.points,
+        description: kudos.description,
+        coreValue: kudos.coreValue,
+        mediaAssetId: kudos.mediaAssetId,
+        mediaUrl: mediaAssets.publicUrl,
+        mediaStorageKey: mediaAssets.storageKey,
+        mediaType: mediaAssets.mediaType,
+        createdAt: kudos.createdAt,
+        senderName: users.displayName,
+        senderAvatarUrl: users.avatarUrl,
+      })
+      .from(kudos)
+      .innerJoin(users, eq(kudos.senderId, users.id))
+      .leftJoin(mediaAssets, eq(kudos.mediaAssetId, mediaAssets.id))
+      .where(
+        cursor
+          ? or(
+              lt(kudos.createdAt, new Date(cursor.createdAt)),
+              and(eq(kudos.createdAt, new Date(cursor.createdAt)), lt(kudos.id, cursor.id))
+            )
+          : undefined
+      )
+      .orderBy(desc(kudos.createdAt), desc(kudos.id))
+      .limit(limit + 1);
+
+    const hasMore = rows.length > limit;
+    const items = hasMore ? rows.slice(0, limit) : rows;
+    const enrichedItems = await hydrateFeedItems(items, request.user!.id);
 
     const nextCursor =
       hasMore && items.length > 0
@@ -396,5 +438,42 @@ export default async function feedRoutes(fastify: FastifyInstance) {
         : null;
 
     return reply.send({ items: enrichedItems, nextCursor });
+  });
+
+  fastify.get('/:id', { preHandler: fastify.requireAuth }, async (request, reply) => {
+    const params = request.params as { id: string };
+    const idParse = uuidSchema.safeParse(params.id);
+    if (!idParse.success) {
+      return reply.status(400).send({ error: 'Invalid kudo id' });
+    }
+
+    const rows = await db
+      .select({
+        id: kudos.id,
+        senderId: kudos.senderId,
+        receiverId: kudos.receiverId,
+        points: kudos.points,
+        description: kudos.description,
+        coreValue: kudos.coreValue,
+        mediaAssetId: kudos.mediaAssetId,
+        mediaUrl: mediaAssets.publicUrl,
+        mediaStorageKey: mediaAssets.storageKey,
+        mediaType: mediaAssets.mediaType,
+        createdAt: kudos.createdAt,
+        senderName: users.displayName,
+        senderAvatarUrl: users.avatarUrl,
+      })
+      .from(kudos)
+      .innerJoin(users, eq(kudos.senderId, users.id))
+      .leftJoin(mediaAssets, eq(kudos.mediaAssetId, mediaAssets.id))
+      .where(eq(kudos.id, params.id))
+      .limit(1);
+
+    if (rows.length === 0) {
+      return reply.status(404).send({ error: 'Kudo not found' });
+    }
+
+    const [item] = await hydrateFeedItems(rows, request.user!.id, Number.MAX_SAFE_INTEGER);
+    return reply.send({ item });
   });
 }

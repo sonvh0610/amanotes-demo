@@ -1,9 +1,11 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { KudoCommentComposer } from '../features/kudos/components/KudoCommentComposer';
 import { KudoMediaGrid } from '../features/kudos/components/KudoMediaGrid';
 import { KudoMediaViewerModal } from '../features/kudos/components/KudoMediaViewerModal';
 import { KudoTaggedText } from '../features/kudos/components/KudoTaggedText';
 import { ReactionToggleGroup } from '../features/kudos/components/ReactionToggleGroup';
+import { AppIcon } from '../components/ui/AppIcon';
 import { useKudoFeed } from '../features/kudos/hooks/useKudoFeed';
 
 export default function KudoFeed() {
@@ -23,6 +25,7 @@ export default function KudoFeed() {
     loadFeed,
     submitComment,
     onToggleReaction,
+    toggleWatch,
     openViewer,
     closeViewer,
     viewPrev,
@@ -31,6 +34,7 @@ export default function KudoFeed() {
     setSelectedTag,
   } = useKudoFeed();
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
 
   useEffect(() => {
     const node = loadMoreRef.current;
@@ -94,12 +98,20 @@ export default function KudoFeed() {
             >
               <div className="flex items-start justify-between gap-4">
                 <div className="min-w-0">
-                  <p className="text-sm text-on-surface-variant">
+                  <Link
+                    className="text-sm text-on-surface-variant underline-offset-2 hover:text-primary hover:underline"
+                    to={`/feed/${item.id}`}
+                  >
                     {new Date(item.createdAt).toLocaleString()}
-                  </p>
+                  </Link>
                   <h2 className="mt-1 text-lg font-bold text-on-surface">
-                    {item.senderName} sent{' '}
-                    <span className="text-primary">{item.points}</span> points
+                    <Link
+                      className="underline-offset-2 hover:text-primary hover:underline"
+                      to={`/feed/${item.id}`}
+                    >
+                      {item.senderName} sent{' '}
+                      <span className="text-primary">{item.points}</span> points
+                    </Link>
                   </h2>
                   <KudoTaggedText
                     text={item.description}
@@ -107,9 +119,34 @@ export default function KudoFeed() {
                     onTagClick={setSelectedTag}
                   />
                 </div>
-                <span className="shrink-0 rounded-full bg-primary-container px-3 py-1 text-xs font-bold text-on-primary-container">
-                  +{item.points}
-                </span>
+                <div className="relative flex items-center gap-2">
+                  <button
+                    aria-label="Feed item settings"
+                    className="inline-flex h-8 w-8 items-center justify-center rounded-full text-on-surface-variant transition-colors hover:bg-surface-container"
+                    type="button"
+                    onClick={() =>
+                      setOpenMenuId((prev) => (prev === item.id ? null : item.id))
+                    }
+                  >
+                    <AppIcon>more_horiz</AppIcon>
+                  </button>
+                  {openMenuId === item.id ? (
+                    <div className="absolute right-0 top-9 z-20 w-56 rounded-xl border border-surface-container bg-surface-container-lowest p-2 shadow-lg">
+                      <button
+                        className="w-full rounded-lg px-3 py-2 text-left text-sm font-medium text-on-surface transition-colors hover:bg-surface-container"
+                        type="button"
+                        onClick={() => {
+                          void toggleWatch(item.id, !item.watchedByViewer);
+                          setOpenMenuId(null);
+                        }}
+                      >
+                        {item.watchedByViewer
+                          ? 'Turn off notifications in this feed'
+                          : 'Turn on notifications in this feed'}
+                      </button>
+                    </div>
+                  ) : null}
+                </div>
               </div>
 
               {item.medias.length > 0 ? (

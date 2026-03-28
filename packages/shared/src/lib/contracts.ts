@@ -182,11 +182,16 @@ export interface FeedItem {
     recentReactions: RecentReaction[];
     recentComments: RecentComment[];
   };
+  watchedByViewer: boolean;
 }
 
 export interface FeedResponse {
   items: FeedItem[];
   nextCursor: string | null;
+}
+
+export interface KudoDetailResponse {
+  item: FeedItem;
 }
 
 export interface TopRecognizerItem {
@@ -245,6 +250,10 @@ export interface NotificationItem {
 export interface NotificationsResponse {
   items: NotificationItem[];
   nextCursor: string | null;
+}
+
+export interface NotificationUnreadCountResponse {
+  unreadCount: number;
 }
 
 export interface RewardItem {

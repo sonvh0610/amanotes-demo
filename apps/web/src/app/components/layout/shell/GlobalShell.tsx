@@ -2,13 +2,23 @@ import { useEffect, useMemo, useState } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import { AppSidebar } from './AppSidebar';
 import { AppIcon } from '../../ui/AppIcon';
+import { RealtimeNotificationsProvider, useRealtimeNotifications } from '../../../features/notifications/context/RealtimeNotificationsContext';
 
 const COLLAPSE_KEY = 'app_shell_sidebar_collapsed';
 
 export function GlobalShell() {
+  return (
+    <RealtimeNotificationsProvider>
+      <GlobalShellContent />
+    </RealtimeNotificationsProvider>
+  );
+}
+
+function GlobalShellContent() {
   const location = useLocation();
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const { unreadCount } = useRealtimeNotifications();
 
   useEffect(() => {
     const raw = window.localStorage.getItem(COLLAPSE_KEY);
@@ -41,6 +51,7 @@ export function GlobalShell() {
         activeKey={activeKey}
         collapsed={collapsed}
         mobileOpen={mobileOpen}
+        unreadNotificationCount={unreadCount}
         onCloseMobile={() => setMobileOpen(false)}
         onToggleDesktopSidebar={() => setCollapsed((prev) => !prev)}
       />

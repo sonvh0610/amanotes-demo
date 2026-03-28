@@ -11,6 +11,7 @@ import {
   commentMediaAssets,
   comments,
   feedEvents,
+  kudoWatchers,
   kudoMediaAssets,
   kudos,
   mediaAssets,
@@ -166,6 +167,17 @@ export default async function kudosRoutes(fastify: FastifyInstance) {
             );
           }
 
+          await tx.insert(kudoWatchers).values([
+            {
+              kudoId: kudo.id,
+              userId: actor.id,
+            },
+            {
+              kudoId: kudo.id,
+              userId: data.receiverId,
+            },
+          ]).onConflictDoNothing();
+
           await tx.insert(pointLedger).values([
             {
               userId: actor.id,
@@ -240,6 +252,7 @@ export default async function kudosRoutes(fastify: FastifyInstance) {
                   senderId: actor.id,
                   receiverId: data.receiverId,
                   points: data.points,
+                  senderName: actor.displayName,
                 },
               }))
           );
@@ -258,6 +271,7 @@ export default async function kudosRoutes(fastify: FastifyInstance) {
 
       await fastify.publishEvent({
         event: 'feed.new',
+        userId: data.receiverId,
         payload: { kudoId: result.id },
         createdAt: new Date().toISOString(),
       });
@@ -269,6 +283,7 @@ export default async function kudosRoutes(fastify: FastifyInstance) {
           type: 'kudo_received',
           kudoId: result.id,
           points: data.points,
+          senderName: actor.displayName,
         },
         createdAt: new Date().toISOString(),
       });
@@ -288,6 +303,63 @@ export default async function kudosRoutes(fastify: FastifyInstance) {
   );
 
   fastify.post(
+    '/:id/watch',
+    { preHandler: fastify.requireAuth },
+    async (request, reply) => {
+      const params = request.params as { id: string };
+      const body = request.body as { watched?: boolean };
+      const watched = Boolean(body?.watched);
+
+      const kudo = await db.query.kudos.findFirst({
+        where: eq(kudos.id, params.id),
+        columns: { id: true },
+      });
+      if (!kudo) {
+        return reply.status(404).send({ error: 'Kudo not found' });
+      }
+
+      if (watched) {
+        await db
+          .insert(kudoWatchers)
+          .values({
+            kudoId: params.id,
+            userId: request.user!.id,
+          })
+          .onConflictDoNothing();
+      } else {
+        await db
+          .delete(kudoWatchers)
+          .where(
+            and(
+              eq(kudoWatchers.kudoId, params.id),
+              eq(kudoWatchers.userId, request.user!.id)
+            )
+          );
+      }
+
+      return reply.send({ watched });
+    }
+  );
+
+  fastify.get(
+    '/:id/watch',
+    { preHandler: fastify.requireAuth },
+    async (request, reply) => {
+      const params = request.params as { id: string };
+
+      const existing = await db.query.kudoWatchers.findFirst({
+        where: and(
+          eq(kudoWatchers.kudoId, params.id),
+          eq(kudoWatchers.userId, request.user!.id)
+        ),
+        columns: { kudoId: true },
+      });
+
+      return reply.send({ watched: Boolean(existing) });
+    }
+  );
+
+  fastify.post(
     '/:id/reactions',
     { preHandler: fastify.requireAuth },
     async (request, reply) => {
@@ -296,6 +368,17 @@ export default async function kudosRoutes(fastify: FastifyInstance) {
         return reply.status(400).send({ error: parsed.error.flatten() });
       }
       const params = request.params as { id: string };
+      const kudo = await db.query.kudos.findFirst({
+        where: eq(kudos.id, params.id),
+        columns: {
+          id: true,
+          senderId: true,
+          receiverId: true,
+        },
+      });
+      if (!kudo) {
+        return reply.status(404).send({ error: 'Kudo not found' });
+      }
 
       const inserted = await db
         .insert(reactions)
@@ -364,6 +447,17 @@ export default async function kudosRoutes(fastify: FastifyInstance) {
         return reply.status(400).send({ error: parsed.error.flatten() });
       }
       const params = request.params as { id: string };
+      const kudo = await db.query.kudos.findFirst({
+        where: eq(kudos.id, params.id),
+        columns: {
+          id: true,
+          senderId: true,
+          receiverId: true,
+        },
+      });
+      if (!kudo) {
+        return reply.status(404).send({ error: 'Kudo not found' });
+      }
 
       const requestedMediaIds = parsed.data.mediaAssetIds?.length
         ? Array.from(new Set(parsed.data.mediaAssetIds))
@@ -414,6 +508,14 @@ export default async function kudosRoutes(fastify: FastifyInstance) {
         return reply.status(500).send({ error: 'Cannot create comment' });
       }
 
+      await db
+        .insert(kudoWatchers)
+        .values({
+          kudoId: params.id,
+          userId: request.user!.id,
+        })
+        .onConflictDoNothing();
+
       if (validMediaIds.length > 0) {
         await db.insert(commentMediaAssets).values(
           validMediaIds.map((mediaAssetId, index) => ({
@@ -440,6 +542,48 @@ export default async function kudosRoutes(fastify: FastifyInstance) {
         },
         createdAt: new Date().toISOString(),
       });
+
+      const watcherRows = await db
+        .select({ userId: kudoWatchers.userId })
+        .from(kudoWatchers)
+        .where(eq(kudoWatchers.kudoId, params.id));
+
+      const recipientIds = watcherRows
+        .map((row) => row.userId)
+        .filter((id) => id !== request.user!.id);
+
+      if (recipientIds.length > 0) {
+        await db.insert(notifications).values(
+          recipientIds.map((userId) => ({
+            userId,
+            type: 'kudo_commented',
+            payloadJson: {
+              kudoId: params.id,
+              commentId: comment.id,
+              commenterId: request.user!.id,
+              commenterName: request.user!.displayName,
+            },
+          }))
+        );
+
+        const createdAt = new Date().toISOString();
+        await Promise.all(
+          recipientIds.map((userId) =>
+            fastify.publishEvent({
+              event: 'notification.new',
+              userId,
+              payload: {
+                type: 'kudo_commented',
+                kudoId: params.id,
+                commentId: comment.id,
+                commenterId: request.user!.id,
+                commenterName: request.user!.displayName,
+              },
+              createdAt,
+            })
+          )
+        );
+      }
 
       return reply.status(201).send({ comment });
     }

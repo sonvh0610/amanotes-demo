@@ -53,6 +53,10 @@ export function useKudoTagSuggestions({
     setCaret(nextCaret);
   };
 
+  const onTextareaBlur = () => {
+    setDismissed(true);
+  };
+
   const applySuggestion = (tag: string) => {
     const textarea = textareaRef.current;
     if (!textarea) return;
@@ -102,6 +106,7 @@ export function useKudoTagSuggestions({
     onTextareaChange,
     onTextareaSelectionChange,
     onTextareaKeyDown,
+    onTextareaBlur,
     applySuggestion,
   };
 }
