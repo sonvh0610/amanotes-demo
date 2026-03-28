@@ -8,10 +8,26 @@ import {
   createPresignedReadUrl,
   makeObjectPublicUrl,
   makeStorageKey,
+  uploadObject,
 } from '../../services/storage.js';
 import { mediaValidationQueue } from '../../workers/media.worker.js';
 
 const MAX_IMAGE_BYTES = 1 * 1024 * 1024;
+
+function readMultipartFieldValue(
+  field: unknown
+) {
+  if (Array.isArray(field)) {
+    return readMultipartFieldValue(field[0]);
+  }
+
+  if (!field || typeof field !== 'object') {
+    return undefined;
+  }
+
+  const value = (field as { value?: unknown }).value;
+  return typeof value === 'string' ? value : undefined;
+}
 
 export default async function uploadRoutes(fastify: FastifyInstance) {
   fastify.get(
@@ -76,6 +92,7 @@ export default async function uploadRoutes(fastify: FastifyInstance) {
             mediaType: parsed.data.mediaType,
             mimeType: parsed.data.mimeType,
             fileSizeBytes: parsed.data.fileSizeBytes,
+            durationSeconds: parsed.data.durationSeconds,
             storageKey: key,
             publicUrl: makeObjectPublicUrl(key),
             status: 'pending',
@@ -92,6 +109,60 @@ export default async function uploadRoutes(fastify: FastifyInstance) {
           .status(503)
           .send({ error: 'Upload storage is unavailable' });
       }
+    }
+  );
+
+  fastify.post(
+    '/proxy',
+    { preHandler: fastify.requireAuth },
+    async (request, reply) => {
+      const file = await request.file();
+      if (!file) {
+        return reply.status(400).send({ error: 'Upload file is required' });
+      }
+
+      const mediaAssetId = readMultipartFieldValue(file.fields.mediaAssetId);
+      const parsedId = uuidSchema.safeParse(mediaAssetId);
+      if (!parsedId.success) {
+        return reply.status(400).send({ error: 'Invalid mediaAssetId' });
+      }
+
+      const media = await db.query.mediaAssets.findFirst({
+        where: and(
+          eq(mediaAssets.id, parsedId.data),
+          eq(mediaAssets.ownerId, request.user!.id)
+        ),
+      });
+      if (!media) {
+        return reply.status(404).send({ error: 'Media asset not found' });
+      }
+
+      const buffer = await file.toBuffer();
+      if (buffer.byteLength !== media.fileSizeBytes) {
+        return reply.status(400).send({ error: 'Uploaded file size mismatch' });
+      }
+
+      const durationValue = readMultipartFieldValue(
+        file.fields.durationSeconds
+      );
+      const durationSeconds =
+        typeof durationValue === 'string' && durationValue.trim().length > 0
+          ? Number(durationValue)
+          : undefined;
+
+      await uploadObject({
+        key: media.storageKey,
+        mimeType: media.mimeType || file.mimetype,
+        body: buffer,
+        metadata:
+          media.mediaType === 'video' && typeof durationSeconds === 'number'
+            ? {
+                'duration-seconds': String(durationSeconds),
+              }
+            : undefined,
+      });
+
+      return reply.status(201).send({ ok: true, mediaAssetId: media.id });
     }
   );
 

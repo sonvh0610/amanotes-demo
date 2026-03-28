@@ -97,6 +97,25 @@ export async function createPresignedUploadUrl(input: {
   return url;
 }
 
+export async function uploadObject(input: {
+  key: string;
+  mimeType: string;
+  body: Buffer;
+  metadata?: Record<string, string>;
+}) {
+  await ensureBucketReady();
+
+  await s3Client.send(
+    new PutObjectCommand({
+      Bucket: env.S3_BUCKET,
+      Key: input.key,
+      Body: input.body,
+      ContentType: input.mimeType,
+      Metadata: input.metadata,
+    })
+  );
+}
+
 export async function createPresignedReadUrl(input: { key: string }) {
   await ensureBucketReady();
   const cmd = new GetObjectCommand({

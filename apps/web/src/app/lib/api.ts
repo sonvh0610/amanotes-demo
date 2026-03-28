@@ -131,17 +131,23 @@ export async function apiRequest<T>(
 ): Promise<T> {
   const { body, headers, ...rest } = options;
   const hasBody = body !== undefined;
+  const isFormData =
+    typeof FormData !== 'undefined' && body instanceof FormData;
   const method = normalizeMethod(rest.method);
   const csrfToken = MUTATING_METHODS.has(method) ? await getCsrfToken() : null;
 
   const response = await fetch(apiUrl(path), {
     credentials: 'include',
     headers: {
-      ...(hasBody ? { 'content-type': 'application/json' } : {}),
+      ...(hasBody && !isFormData ? { 'content-type': 'application/json' } : {}),
       ...(csrfToken ? { 'x-csrf-token': csrfToken } : {}),
       ...headers,
     },
-    body: hasBody ? JSON.stringify(body) : undefined,
+    body: hasBody
+      ? isFormData
+        ? (body as FormData)
+        : JSON.stringify(body)
+      : undefined,
     method,
     ...rest,
   });

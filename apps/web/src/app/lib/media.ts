@@ -41,6 +41,45 @@ async function getVideoDurationSeconds(file: File): Promise<number> {
   }
 }
 
+async function parseUploadFailure(response: Response): Promise<string> {
+  const fallback = `Media upload failed (${response.status})`;
+  try {
+    const body = await response.text();
+    if (!body) {
+      return fallback;
+    }
+
+    const codeMatch = body.match(/<Code>([^<]+)<\/Code>/i);
+    const messageMatch = body.match(/<Message>([^<]+)<\/Message>/i);
+    if (codeMatch || messageMatch) {
+      const parts = [codeMatch?.[1], messageMatch?.[1]].filter(Boolean);
+      return parts.length > 0 ? parts.join(': ') : fallback;
+    }
+
+    return `${fallback}: ${body.slice(0, 160)}`;
+  } catch {
+    return fallback;
+  }
+}
+
+async function uploadMediaViaApiFallback(input: {
+  file: File;
+  mediaAssetId: string;
+  durationSeconds?: number;
+}) {
+  const formData = new FormData();
+  formData.append('mediaAssetId', input.mediaAssetId);
+  if (typeof input.durationSeconds === 'number') {
+    formData.append('durationSeconds', String(input.durationSeconds));
+  }
+  formData.append('file', input.file, input.file.name);
+
+  await apiRequest('/uploads/proxy', {
+    method: 'POST',
+    body: formData,
+  });
+}
+
 export async function uploadMedia(file: File): Promise<string> {
   validateFile(file);
   const mediaType = mediaTypeForFile(file);
@@ -73,7 +112,13 @@ export async function uploadMedia(file: File): Promise<string> {
     body: file,
   });
   if (!uploaded.ok) {
-    throw new Error('Media upload failed');
+    await uploadMediaViaApiFallback({
+      file,
+      mediaAssetId: presign.mediaAsset.id,
+      durationSeconds,
+    }).catch(async () => {
+      throw new Error(await parseUploadFailure(uploaded));
+    });
   }
 
   await apiRequest('/uploads/complete', {
@@ -124,7 +169,12 @@ export async function uploadImageAndGetPublicUrl(file: File): Promise<string> {
     body: file,
   });
   if (!uploaded.ok) {
-    throw new Error('Media upload failed');
+    await uploadMediaViaApiFallback({
+      file,
+      mediaAssetId: presign.mediaAsset.id,
+    }).catch(async () => {
+      throw new Error(await parseUploadFailure(uploaded));
+    });
   }
 
   await apiRequest('/uploads/complete', {
