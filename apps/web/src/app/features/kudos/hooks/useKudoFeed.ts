@@ -2,8 +2,8 @@ import { useEffect, useState } from 'react';
 import { wsUrl } from '../../../lib/api';
 import { uploadManyMedia } from '../../../lib/media';
 import { getUserFacingError } from '../../../lib/user-errors';
+import type { FeedItem, KudoMedia } from '@org/shared';
 import { createComment, fetchFeed, toggleReaction } from '../api';
-import { FeedItem, KudoMedia } from '../types';
 
 type ViewerState = {
   medias: KudoMedia[];
@@ -23,6 +23,7 @@ export function useKudoFeed() {
   const [viewer, setViewer] = useState<ViewerState | null>(null);
 
   const loadFeed = async (nextCursor?: string | null) => {
+    if (loading) return;
     setLoading(true);
     setError(null);
     try {

@@ -339,6 +339,7 @@ export const rewards = pgTable(
   {
     id: uuid('id').primaryKey().defaultRandom(),
     name: varchar('name', { length: 140 }).notNull(),
+    thumbnailUrl: text('thumbnail_url'),
     costPoints: integer('cost_points').notNull(),
     stock: integer('stock').notNull().default(0),
     active: boolean('active').notNull().default(true),

@@ -42,3 +42,22 @@
 - Preserve dashboard styling language:
   - Primary actions use primary color and pointer cursor.
   - Reusable components should keep current design tokens and Tailwind utility conventions.
+
+## Goodjob Rewards & Wallet Feature Rules
+
+- Keep `Rewards` and `My Wallet` logic/presentation separated:
+  - Rewards server calls live in `apps/web/src/app/features/rewards/api.ts`.
+  - Rewards stateful behavior lives in `apps/web/src/app/features/rewards/hooks/*`.
+  - Rewards reusable UI pieces live in `apps/web/src/app/features/rewards/components/*`.
+  - Wallet server calls live in `apps/web/src/app/features/wallet/api.ts`.
+  - Wallet stateful behavior lives in `apps/web/src/app/features/wallet/hooks/*`.
+  - Wallet reusable UI pieces live in `apps/web/src/app/features/wallet/components/*`.
+  - Page files in `apps/web/src/app/pages/*` should compose feature hooks/components only.
+- Rewards UX contracts:
+  - Clicking `Redeem` must ask for explicit confirmation before sending request.
+  - Successful redeem/create/update must show user-facing success notification.
+  - Reward create/edit modal should support thumbnail upload via dropzone-style UI.
+  - Reward card thumbnails must gracefully fallback if image cannot be loaded.
+- Wallet UX contracts:
+  - `My Wallet` should include recent point transaction history.
+  - Transaction list entries should translate internal reason codes to readable labels.

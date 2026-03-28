@@ -1,6 +1,10 @@
 const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL?.toString() ?? '';
 
+export function apiUrl(path: string): string {
+  return `${API_BASE_URL}${path}`;
+}
+
 type RequestOptions = Omit<RequestInit, 'body'> & {
   body?: unknown;
 };
@@ -86,7 +90,7 @@ export async function apiRequest<T>(
   const { body, headers, ...rest } = options;
   const hasBody = body !== undefined;
 
-  const response = await fetch(`${API_BASE_URL}${path}`, {
+  const response = await fetch(apiUrl(path), {
     credentials: 'include',
     headers: {
       ...(hasBody ? { 'content-type': 'application/json' } : {}),

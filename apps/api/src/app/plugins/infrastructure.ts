@@ -17,6 +17,7 @@ export default fp(async function infrastructurePlugin(fastify) {
   await fastify.register(cors, {
     origin: env.APP_BASE_URL,
     credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   });
   await fastify.register(rateLimit, {
     max: env.RATE_LIMIT_MAX,

@@ -1,9 +1,9 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react';
+import type { KudoUserOption } from '@org/shared';
 import { useNavigate } from 'react-router-dom';
 import { uploadManyMedia } from '../../../lib/media';
 import { getUserFacingError } from '../../../lib/user-errors';
 import { listKudoUsers, sendKudo } from '../api';
-import { KudoUserOption } from '../types';
 
 export function useSendKudosForm() {
   const navigate = useNavigate();

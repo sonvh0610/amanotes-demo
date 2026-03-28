@@ -1,16 +1,32 @@
+import type {
+  CreateCommentBody,
+  CreateKudoBody,
+  FeedResponse,
+  KudoUserOption,
+} from '@org/shared';
 import { apiRequest } from '../../lib/api';
-import { FeedResponse, KudoUserOption } from './types';
 
 export async function listKudoUsers(limit = 50) {
-  return apiRequest<{ items: KudoUserOption[] }>(`/users?limit=${limit}`);
+  const items: KudoUserOption[] = [];
+  let cursor: string | null = null;
+
+  do {
+    const params = new URLSearchParams();
+    params.set('limit', String(limit));
+    if (cursor) params.set('cursor', cursor);
+
+    const result = await apiRequest<{
+      items: KudoUserOption[];
+      nextCursor: string | null;
+    }>(`/users?${params.toString()}`);
+    items.push(...result.items);
+    cursor = result.nextCursor;
+  } while (cursor);
+
+  return { items };
 }
 
-export async function sendKudo(input: {
-  receiverId: string;
-  points: number;
-  description: string;
-  mediaAssetIds?: string[];
-}) {
+export async function sendKudo(input: CreateKudoBody) {
   return apiRequest('/kudos', {
     method: 'POST',
     body: input,
@@ -30,11 +46,9 @@ export async function toggleReaction(input: { kudoId: string; emoji: string }) {
   });
 }
 
-export async function createComment(input: {
-  kudoId: string;
-  text?: string;
-  mediaAssetIds?: string[];
-}) {
+export async function createComment(
+  input: { kudoId: string } & Pick<CreateCommentBody, 'text' | 'mediaAssetIds'>
+) {
   return apiRequest(`/kudos/${input.kudoId}/comments`, {
     method: 'POST',
     body: {

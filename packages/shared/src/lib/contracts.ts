@@ -56,17 +56,36 @@ export const createCommentBodySchema = z
 export const listUsersQuerySchema = z.object({
   q: z.string().min(1).max(80).optional(),
   limit: z.coerce.number().int().min(1).max(50).default(20),
+  cursor: z.string().optional(),
 });
 
 export const redeemRewardBodySchema = z.object({
   quantity: z.number().int().min(1).max(1).default(1),
 });
 
+const rewardThumbnailUrlSchema = z.preprocess(
+  (value) => {
+    if (typeof value !== 'string') return value;
+    const trimmed = value.trim();
+    return trimmed.length === 0 ? null : trimmed;
+  },
+  z.string().url().max(1024).nullable().optional()
+);
+
 export const createRewardBodySchema = z.object({
   name: z.string().min(2).max(140),
   costPoints: z.number().int().positive().max(100000),
   stock: z.number().int().min(0).max(100000).default(0),
+  thumbnailUrl: rewardThumbnailUrlSchema,
   active: z.boolean().default(true),
+});
+
+export const updateRewardBodySchema = z.object({
+  name: z.string().min(2).max(140),
+  costPoints: z.number().int().positive().max(100000),
+  stock: z.number().int().min(0).max(100000),
+  thumbnailUrl: rewardThumbnailUrlSchema,
+  active: z.boolean().optional(),
 });
 
 export const feedCursorSchema = z.object({
@@ -79,6 +98,21 @@ export const listFeedQuerySchema = z.object({
   limit: z.coerce.number().int().min(1).max(50).default(20),
 });
 
+export const listWalletTransactionsQuerySchema = z.object({
+  cursor: z.string().optional(),
+  limit: z.coerce.number().int().min(1).max(100).default(20),
+});
+
+export const listNotificationsQuerySchema = z.object({
+  cursor: z.string().optional(),
+  limit: z.coerce.number().int().min(1).max(100).default(20),
+});
+
+export const listRewardsQuerySchema = z.object({
+  cursor: z.string().optional(),
+  limit: z.coerce.number().int().min(1).max(100).default(20),
+});
+
 export type UploadPresignBody = z.infer<typeof uploadPresignBodySchema>;
 export type CreateKudoBody = z.infer<typeof createKudoBodySchema>;
 export type CreateReactionBody = z.infer<typeof createReactionBodySchema>;
@@ -86,6 +120,127 @@ export type CreateCommentBody = z.infer<typeof createCommentBodySchema>;
 export type ListUsersQuery = z.infer<typeof listUsersQuerySchema>;
 export type RedeemRewardBody = z.infer<typeof redeemRewardBodySchema>;
 export type CreateRewardBody = z.infer<typeof createRewardBodySchema>;
+export type UpdateRewardBody = z.infer<typeof updateRewardBodySchema>;
+export type ListWalletTransactionsQuery = z.infer<
+  typeof listWalletTransactionsQuerySchema
+>;
+export type ListNotificationsQuery = z.infer<typeof listNotificationsQuerySchema>;
+export type ListRewardsQuery = z.infer<typeof listRewardsQuerySchema>;
+
+export interface KudoUserOption {
+  id: string;
+  displayName: string;
+  email: string;
+  avatarUrl?: string | null;
+}
+
+export interface KudoMedia {
+  mediaAssetId: string;
+  mediaType: 'image' | 'video';
+  mediaUrl: string | null;
+}
+
+export interface RecentReaction {
+  id: string;
+  emoji: string;
+  createdAt: string;
+  userId: string;
+  userName: string;
+}
+
+export interface RecentComment {
+  id: string;
+  text: string;
+  mediaAssetId: string | null;
+  medias: KudoMedia[];
+  createdAt: string;
+  userId: string;
+  userName: string;
+}
+
+export interface FeedItem {
+  id: string;
+  senderId: string;
+  receiverId: string;
+  senderName: string;
+  senderAvatarUrl: string | null;
+  description: string;
+  points: number;
+  medias: KudoMedia[];
+  createdAt: string;
+  engagement: {
+    reactions: { emoji: string; count: number }[];
+    userReactions: string[];
+    commentsCount: number;
+    recentReactions: RecentReaction[];
+    recentComments: RecentComment[];
+  };
+}
+
+export interface FeedResponse {
+  items: FeedItem[];
+  nextCursor: string | null;
+}
+
+export interface WalletResponse {
+  wallet: {
+    receivedWallet: {
+      userId: string;
+      availablePoints: number;
+      updatedAt: string;
+    };
+    givingWallet: {
+      monthKey: string;
+      limitPoints: number;
+      spentPoints: number;
+      remainingPoints: number;
+      updatedAt: string;
+    };
+  };
+}
+
+export interface WalletTransactionItem {
+  id: string;
+  deltaPoints: number;
+  direction: 'credit' | 'debit';
+  reason: string;
+  refType: string;
+  refId: string;
+  createdAt: string;
+  detail: string | null;
+}
+
+export interface WalletTransactionsResponse {
+  items: WalletTransactionItem[];
+  nextCursor: string | null;
+}
+
+export interface NotificationItem {
+  id: string;
+  type: string;
+  payloadJson: Record<string, unknown>;
+  readAt: string | null;
+  createdAt: string;
+}
+
+export interface NotificationsResponse {
+  items: NotificationItem[];
+  nextCursor: string | null;
+}
+
+export interface RewardItem {
+  id: string;
+  name: string;
+  thumbnailUrl?: string | null;
+  costPoints: number;
+  stock: number;
+  active: boolean;
+}
+
+export interface RewardsResponse {
+  items: RewardItem[];
+  nextCursor: string | null;
+}
 
 export type RealtimeEventType =
   | 'feed.new'

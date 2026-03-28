@@ -1,89 +1,107 @@
-import { useEffect, useState } from 'react';
-import { apiRequest } from '../lib/api';
-import { getUserFacingError } from '../lib/user-errors';
-
-interface RewardItem {
-  id: string;
-  name: string;
-  costPoints: number;
-  stock: number;
-  active: boolean;
-}
+import { useEffect, useRef } from 'react';
+import { RewardCard } from '../features/rewards/components/RewardCard';
+import { RedeemConfirmModal } from '../features/rewards/components/RedeemConfirmModal';
+import { RewardFormModal } from '../features/rewards/components/RewardFormModal';
+import { useRewardsCatalog } from '../features/rewards/hooks/useRewardsCatalog';
 
 export default function RewardsCatalog() {
-  const [items, setItems] = useState<RewardItem[]>([]);
-  const [error, setError] = useState<string | null>(null);
-  const [redeemingId, setRedeemingId] = useState<string | null>(null);
-
-  const loadRewards = async () => {
-    try {
-      const result = await apiRequest<{ items: RewardItem[] }>('/rewards');
-      setItems(result.items);
-    } catch (requestError) {
-      setError(
-        getUserFacingError(requestError, {
-          context: 'rewards-load',
-          fallback: 'Unable to load rewards right now. Please try again.',
-        })
-      );
-    }
-  };
+  const { state, dropzone, actions } = useRewardsCatalog();
+  const loadMoreRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
-    void loadRewards();
-  }, []);
+    const node = loadMoreRef.current;
+    if (!node || !state.hasMore || state.loadingMore) return;
 
-  const redeem = async (rewardId: string) => {
-    try {
-      setRedeemingId(rewardId);
-      const key = crypto.randomUUID();
-      await apiRequest(`/rewards/${rewardId}/redeem`, {
-        method: 'POST',
-        headers: {
-          'x-idempotency-key': key,
-        },
-        body: { quantity: 1 },
-      });
-      await loadRewards();
-    } catch (requestError) {
-      setError(
-        getUserFacingError(requestError, {
-          context: 'reward-redeem',
-          fallback: 'Unable to redeem this reward right now. Please try again.',
-        })
-      );
-    } finally {
-      setRedeemingId(null);
-    }
-  };
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const [entry] = entries;
+        if (entry?.isIntersecting) {
+          void actions.loadMoreRewards();
+        }
+      },
+      { rootMargin: '220px 0px' }
+    );
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [actions.loadMoreRewards, state.hasMore, state.loadingMore]);
 
   return (
-    <div className="mx-auto max-w-3xl p-6">
-      <h1 className="text-2xl font-bold text-on-surface">Rewards</h1>
-      {error ? <p className="mt-3 text-sm text-red-600">{error}</p> : null}
-      <div className="mt-6 space-y-3">
-        {items.map((item) => (
-          <article
-            className="flex items-center justify-between rounded-lg bg-surface-container-lowest p-4 shadow-sm"
-            key={item.id}
-          >
-            <div>
-              <p className="font-semibold text-on-surface">{item.name}</p>
-              <p className="text-sm text-on-surface-variant">
-                {item.costPoints} points • stock: {item.stock}
-              </p>
-            </div>
+    <div className="min-h-[calc(100vh-5rem)] bg-surface-container-low px-4 py-6 sm:px-6 md:py-8 lg:px-8">
+      <div className="mx-auto max-w-6xl">
+        <header className="flex items-start justify-between gap-4">
+          <div>
+            <h1 className="text-4xl font-extrabold tracking-tight text-on-surface md:text-5xl">
+              Rewards
+            </h1>
+            <p className="mt-2 text-on-surface-variant">
+              Redeem points for perks, gift cards, and team rewards.
+            </p>
+          </div>
+          {state.canManageRewards ? (
             <button
-              className="rounded-md bg-primary px-3 py-2 text-sm text-on-primary hover:bg-primary-dim transition-colors disabled:opacity-50"
-              disabled={item.stock <= 0 || redeemingId === item.id}
-              onClick={() => void redeem(item.id)}
+              className="cursor-pointer rounded-full bg-primary px-4 py-2 text-sm font-semibold text-on-primary transition-colors hover:bg-primary-dim"
+              onClick={actions.openCreateModal}
               type="button"
             >
-              {redeemingId === item.id ? 'Redeeming...' : 'Redeem'}
+              Add Reward
             </button>
-          </article>
-        ))}
+          ) : null}
+        </header>
+
+        {state.successMessage ? (
+          <p className="mt-3 rounded-md border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-700">
+            {state.successMessage}
+          </p>
+        ) : null}
+        {state.error ? <p className="mt-3 text-sm text-red-600">{state.error}</p> : null}
+
+        <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {state.items.map((item) => (
+            <RewardCard
+              canManageRewards={state.canManageRewards}
+              item={item}
+              key={item.id}
+              onEdit={actions.openEditModal}
+              onRedeem={actions.requestRedeem}
+              redeeming={state.redeemingId === item.id}
+            />
+          ))}
+        </div>
+
+        {state.items.length === 0 ? (
+          <p className="mt-6 text-sm text-on-surface-variant">No rewards available yet.</p>
+        ) : null}
+        {state.hasMore ? <div className="mt-6 h-8" ref={loadMoreRef} /> : null}
+        {state.loadingMore ? (
+          <p className="mt-2 text-sm text-on-surface-variant">Loading more rewards...</p>
+        ) : null}
       </div>
+
+      <RewardFormModal
+        form={state.rewardForm}
+        formError={state.formError}
+        getThumbnailDropInputProps={dropzone.getInputProps}
+        getThumbnailDropRootProps={dropzone.getRootProps}
+        isOpen={Boolean(state.modalMode)}
+        isThumbnailDragActive={dropzone.isDragActive}
+        mode={state.modalMode}
+        onClose={actions.closeModal}
+        onSetForm={actions.setRewardForm}
+        onSubmit={() => void actions.submitRewardForm()}
+        onThumbnailBroken={actions.setThumbnailPreviewBroken}
+        openThumbnailPicker={dropzone.open}
+        submitting={state.submitting}
+        thumbnailPreviewBroken={state.thumbnailPreviewBroken}
+        thumbnailPreviewUrl={state.thumbnailPreviewUrl}
+        uploadingThumbnail={state.uploadingThumbnail}
+      />
+
+      <RedeemConfirmModal
+        loading={Boolean(state.redeemingId)}
+        onCancel={actions.cancelRedeem}
+        onConfirm={() => void actions.confirmRedeem()}
+        reward={state.pendingRedeem}
+      />
     </div>
   );
 }

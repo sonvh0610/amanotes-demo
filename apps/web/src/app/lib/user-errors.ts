@@ -129,6 +129,10 @@ const CONTEXT_RULES: Record<UserErrorContext, ErrorRule[]> = {
       message: 'You do not have enough points to redeem this reward.',
     },
     {
+      includes: ['insufficient_points'],
+      message: 'You do not have enough points to redeem this reward.',
+    },
+    {
       includes: ['reward out of stock'],
       message: 'This reward is out of stock right now.',
     },

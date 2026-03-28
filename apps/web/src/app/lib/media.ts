@@ -1,10 +1,11 @@
-import { apiRequest } from './api';
+import { apiRequest, apiUrl } from './api';
 
 interface PresignResponse {
   uploadUrl: string;
   mediaAsset: {
     id: string;
     mediaType: 'image' | 'video';
+    publicUrl?: string | null;
   };
 }
 
@@ -96,4 +97,42 @@ export async function uploadManyMedia(files: File[]): Promise<string[]> {
     ids.push(id);
   }
   return ids;
+}
+
+export async function uploadImageAndGetPublicUrl(file: File): Promise<string> {
+  if (!file.type.startsWith('image/')) {
+    throw new Error('Only image files are supported for reward thumbnails');
+  }
+
+  validateFile(file);
+
+  const presign = await apiRequest<PresignResponse>('/uploads/presign', {
+    method: 'POST',
+    body: {
+      fileName: file.name,
+      mimeType: file.type || 'application/octet-stream',
+      fileSizeBytes: file.size,
+      mediaType: 'image',
+    },
+  });
+
+  const uploaded = await fetch(presign.uploadUrl, {
+    method: 'PUT',
+    headers: {
+      'content-type': file.type || 'application/octet-stream',
+    },
+    body: file,
+  });
+  if (!uploaded.ok) {
+    throw new Error('Media upload failed');
+  }
+
+  await apiRequest('/uploads/complete', {
+    method: 'POST',
+    body: {
+      mediaAssetId: presign.mediaAsset.id,
+    },
+  });
+
+  return apiUrl(`/uploads/media/${presign.mediaAsset.id}/view`);
 }

@@ -24,7 +24,6 @@ export function GlobalShell() {
   }, [location.pathname, location.search]);
 
   const activeKey = useMemo(() => {
-    if (location.pathname === '/admin') return 'admin';
     if (location.pathname === '/') return 'dashboard';
     if (location.pathname === '/feed') return 'feed';
     if (location.pathname === '/send-kudos') return 'send';

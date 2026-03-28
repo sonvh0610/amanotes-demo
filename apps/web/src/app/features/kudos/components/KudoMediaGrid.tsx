@@ -1,4 +1,4 @@
-import { KudoMedia } from '../types';
+import type { KudoMedia } from '@org/shared';
 
 type KudoMediaGridProps = {
   medias: KudoMedia[];

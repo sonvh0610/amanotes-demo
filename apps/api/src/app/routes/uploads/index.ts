@@ -5,6 +5,7 @@ import { db } from '../../db/client.js';
 import { mediaAssets } from '../../db/schema.js';
 import {
   createPresignedUploadUrl,
+  createPresignedReadUrl,
   makeObjectPublicUrl,
   makeStorageKey,
 } from '../../services/storage.js';
@@ -13,6 +14,31 @@ import { mediaValidationQueue } from '../../workers/media.worker.js';
 const MAX_IMAGE_BYTES = 1 * 1024 * 1024;
 
 export default async function uploadRoutes(fastify: FastifyInstance) {
+  fastify.get(
+    '/media/:id/view',
+    { preHandler: fastify.requireAuth },
+    async (request, reply) => {
+      const mediaAssetId = (request.params as { id: string }).id;
+      const parsedId = uuidSchema.safeParse(mediaAssetId);
+      if (!parsedId.success) {
+        return reply.status(400).send({ error: 'Invalid mediaAssetId' });
+      }
+
+      const media = await db.query.mediaAssets.findFirst({
+        where: eq(mediaAssets.id, parsedId.data),
+      });
+      if (!media) {
+        return reply.status(404).send({ error: 'Media asset not found' });
+      }
+      if (media.status === 'rejected') {
+        return reply.status(410).send({ error: 'Media asset rejected' });
+      }
+
+      const signedUrl = await createPresignedReadUrl({ key: media.storageKey });
+      return reply.redirect(signedUrl);
+    }
+  );
+
   fastify.post('/presign', { preHandler: fastify.requireAuth }, async (request, reply) => {
     const parsed = uploadPresignBodySchema.safeParse(request.body);
     if (!parsed.success) {

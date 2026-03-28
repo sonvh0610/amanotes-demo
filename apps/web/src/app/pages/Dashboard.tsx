@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
+import type { FeedResponse } from '@org/shared';
 import { AppIcon } from '../components/ui/AppIcon';
 import { useAuth } from '../context/AuthContext';
 import { apiRequest } from '../lib/api';
@@ -28,11 +29,6 @@ interface FeedPreviewItem {
   createdAt: string;
 }
 
-interface FeedResponse {
-  items: FeedPreviewItem[];
-  nextCursor: string | null;
-}
-
 export default function Dashboard() {
   const { user } = useAuth();
   const [wallet, setWallet] = useState<WalletResponse['wallet'] | null>(null);
@@ -52,8 +48,8 @@ export default function Dashboard() {
           apiRequest<WalletResponse>('/wallet'),
           apiRequest<FeedResponse>('/feed?limit=3'),
         ]);
-        setWallet(walletRes.wallet);
-        setRecentFeed(feedRes.items);
+        setWallet(walletRes.wallet ?? null);
+        setRecentFeed(Array.isArray(feedRes.items) ? feedRes.items : []);
       } catch (requestError) {
         setError(
           getUserFacingError(requestError, {

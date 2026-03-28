@@ -22,10 +22,7 @@ export function AppSidebar({
 }: AppSidebarProps) {
   const { logout, user } = useAuth();
   const desktopSidebarWidth = collapsed ? 'lg:w-20' : 'lg:w-64';
-  const navItems =
-    user?.role === 'admin'
-      ? NAV_ITEMS
-      : NAV_ITEMS.filter((item) => item.key !== 'admin');
+  const navItems = NAV_ITEMS;
   const profileName = user?.displayName ?? 'Member';
   const profileEmail = user?.email ?? '';
   const profileInitial = profileName.trim().charAt(0).toUpperCase() || 'M';

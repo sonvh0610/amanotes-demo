@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react';
 import { KudoCommentComposer } from '../features/kudos/components/KudoCommentComposer';
 import { KudoMediaGrid } from '../features/kudos/components/KudoMediaGrid';
 import { KudoMediaViewerModal } from '../features/kudos/components/KudoMediaViewerModal';
@@ -25,6 +26,24 @@ export default function KudoFeed() {
     viewPrev,
     viewNext,
   } = useKudoFeed();
+  const loadMoreRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    const node = loadMoreRef.current;
+    if (!node || !cursor || loading) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const [entry] = entries;
+        if (entry?.isIntersecting && cursor) {
+          void loadFeed(cursor);
+        }
+      },
+      { rootMargin: '220px 0px' }
+    );
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [cursor, loading, loadFeed]);
 
   return (
     <div className="min-h-[calc(100vh-5rem)] bg-surface-container-low px-4 py-6 sm:px-6 md:py-8 lg:px-8">
@@ -152,15 +171,9 @@ export default function KudoFeed() {
           ))}
         </div>
 
-        {cursor ? (
-          <button
-            className="mt-6 cursor-pointer rounded-full bg-primary px-6 py-3 font-bold text-on-primary disabled:opacity-60"
-            disabled={loading}
-            onClick={() => void loadFeed(cursor)}
-            type="button"
-          >
-            Load More
-          </button>
+        {cursor ? <div className="mt-6 h-10" ref={loadMoreRef} /> : null}
+        {loading && items.length > 0 ? (
+          <p className="mt-2 text-sm text-on-surface-variant">Loading more feed items...</p>
         ) : null}
       </div>
 

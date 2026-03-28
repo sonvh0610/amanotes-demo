@@ -1,23 +1,33 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import type { NotificationItem, NotificationsResponse } from '@org/shared';
 import { apiRequest, wsUrl } from '../lib/api';
 import { getUserFacingError } from '../lib/user-errors';
 
-interface NotificationItem {
-  id: string;
-  type: string;
-  payloadJson: Record<string, unknown>;
-  readAt: string | null;
-  createdAt: string;
-}
-
 export default function Notifications() {
   const [items, setItems] = useState<NotificationItem[]>([]);
+  const [cursor, setCursor] = useState<string | null>(null);
+  const [hasMore, setHasMore] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const loadMoreRef = useRef<HTMLDivElement | null>(null);
 
-  const loadNotifications = async () => {
+  const loadNotifications = async (nextCursor?: string | null) => {
+    const append = Boolean(nextCursor);
     try {
-      const result = await apiRequest<{ items: NotificationItem[] }>('/notifications');
-      setItems(result.items);
+      if (append) {
+        setLoadingMore(true);
+      }
+      const params = new URLSearchParams();
+      params.set('limit', '20');
+      if (nextCursor) params.set('cursor', nextCursor);
+
+      const result = await apiRequest<NotificationsResponse>(
+        `/notifications?${params.toString()}`
+      );
+      setItems((prev) => (append ? [...prev, ...result.items] : result.items));
+      setCursor(result.nextCursor);
+      setHasMore(Boolean(result.nextCursor));
+      setError(null);
     } catch (requestError) {
       setError(
         getUserFacingError(requestError, {
@@ -25,11 +35,15 @@ export default function Notifications() {
           fallback: 'Unable to load notifications right now. Please try again.',
         })
       );
+    } finally {
+      if (append) {
+        setLoadingMore(false);
+      }
     }
   };
 
   useEffect(() => {
-    void loadNotifications();
+    void loadNotifications(null);
   }, []);
 
   useEffect(() => {
@@ -39,7 +53,7 @@ export default function Notifications() {
         event: string;
       };
       if (payload.event === 'notification.new') {
-        void loadNotifications();
+        void loadNotifications(null);
       }
     };
     return () => {
@@ -49,8 +63,25 @@ export default function Notifications() {
 
   const markAllRead = async () => {
     await apiRequest('/notifications/read', { method: 'POST' });
-    void loadNotifications();
+    void loadNotifications(null);
   };
+
+  useEffect(() => {
+    const node = loadMoreRef.current;
+    if (!node || !hasMore || loadingMore) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const [entry] = entries;
+        if (entry?.isIntersecting && cursor) {
+          void loadNotifications(cursor);
+        }
+      },
+      { rootMargin: '220px 0px' }
+    );
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [cursor, hasMore, loadingMore]);
 
   return (
     <div className="mx-auto max-w-3xl p-6">
@@ -85,6 +116,10 @@ export default function Notifications() {
           </div>
         ))}
       </div>
+      {hasMore ? <div className="mt-3 h-8" ref={loadMoreRef} /> : null}
+      {loadingMore ? (
+        <p className="mt-2 text-sm text-on-surface-variant">Loading more notifications...</p>
+      ) : null}
     </div>
   );
 }

@@ -1,6 +1,11 @@
 import { FastifyInstance } from 'fastify';
-import { and, eq, sql } from 'drizzle-orm';
-import { createRewardBodySchema, redeemRewardBodySchema } from '@org/shared';
+import { and, asc, eq, gt, or, sql } from 'drizzle-orm';
+import {
+  createRewardBodySchema,
+  listRewardsQuerySchema,
+  redeemRewardBodySchema,
+  updateRewardBodySchema,
+} from '@org/shared';
 import { db } from '../../db/client.js';
 import {
   notifications,
@@ -9,6 +14,27 @@ import {
   rewards,
   wallets,
 } from '../../db/schema.js';
+
+function decodeCursor(
+  cursor?: string
+): { costPoints: number; id: string } | null {
+  if (!cursor) return null;
+  try {
+    const decoded = JSON.parse(
+      Buffer.from(cursor, 'base64url').toString('utf-8')
+    ) as { costPoints: number; id: string };
+    if (!decoded.id || !Number.isInteger(decoded.costPoints)) return null;
+    return decoded;
+  } catch {
+    return null;
+  }
+}
+
+function encodeCursor(costPoints: number, id: string): string {
+  return Buffer.from(JSON.stringify({ costPoints, id }), 'utf-8').toString(
+    'base64url'
+  );
+}
 
 export default async function rewardRoutes(fastify: FastifyInstance) {
   fastify.post('/', { preHandler: fastify.requireAuth }, async (request, reply) => {
@@ -30,15 +56,88 @@ export default async function rewardRoutes(fastify: FastifyInstance) {
     return reply.status(201).send({ reward });
   });
 
+  fastify.put(
+    '/:id',
+    { preHandler: fastify.requireAuth },
+    async (request, reply) => {
+      if (request.user?.role !== 'admin') {
+        return reply.status(403).send({ error: 'Admin access required' });
+      }
+
+      const parsed = updateRewardBodySchema.safeParse(request.body);
+      if (!parsed.success) {
+        return reply.status(400).send({ error: parsed.error.flatten() });
+      }
+
+      const rewardId = (request.params as { id: string }).id;
+      const updated = await db
+        .update(rewards)
+        .set({
+          name: parsed.data.name,
+          thumbnailUrl: parsed.data.thumbnailUrl ?? null,
+          costPoints: parsed.data.costPoints,
+          stock: parsed.data.stock,
+          ...(parsed.data.active === undefined ? {} : { active: parsed.data.active }),
+        })
+        .where(eq(rewards.id, rewardId))
+        .returning();
+
+      const reward = updated[0];
+      if (!reward) {
+        return reply.status(404).send({ error: 'Reward not found' });
+      }
+
+      return reply.send({ reward });
+    }
+  );
+
   fastify.get(
     '/',
     { preHandler: fastify.requireAuth },
-    async (_request, reply) => {
-      const items = await db.query.rewards.findMany({
-        where: eq(rewards.active, true),
-        orderBy: (table, { asc }) => [asc(table.costPoints)],
-      });
-      return reply.send({ items });
+    async (request, reply) => {
+      const parsed = listRewardsQuerySchema.safeParse(request.query);
+      if (!parsed.success) {
+        return reply.status(400).send({ error: parsed.error.flatten() });
+      }
+
+      const { limit } = parsed.data;
+      const cursor = decodeCursor(parsed.data.cursor);
+
+      const rows = await db
+        .select({
+          id: rewards.id,
+          name: rewards.name,
+          thumbnailUrl: rewards.thumbnailUrl,
+          costPoints: rewards.costPoints,
+          stock: rewards.stock,
+          active: rewards.active,
+        })
+        .from(rewards)
+        .where(
+          and(
+            eq(rewards.active, true),
+            cursor
+              ? or(
+                  gt(rewards.costPoints, cursor.costPoints),
+                  and(
+                    eq(rewards.costPoints, cursor.costPoints),
+                    gt(rewards.id, cursor.id)
+                  )
+                )
+              : undefined
+          )
+        )
+        .orderBy(asc(rewards.costPoints), asc(rewards.id))
+        .limit(limit + 1);
+
+      const hasMore = rows.length > limit;
+      const items = hasMore ? rows.slice(0, limit) : rows;
+      const nextCursor =
+        hasMore && items.length > 0
+          ? encodeCursor(items[items.length - 1]!.costPoints, items[items.length - 1]!.id)
+          : null;
+
+      return reply.send({ items, nextCursor });
     }
   );
 
