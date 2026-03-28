@@ -11,6 +11,8 @@ import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { getEnv } from '../config/env.js';
 
 const env = getEnv();
+const shouldAutoCreateBucket =
+  env.NODE_ENV !== 'production' && Boolean(env.S3_ENDPOINT);
 
 const s3Client = new S3Client({
   region: env.S3_REGION,
@@ -25,6 +27,10 @@ const s3Client = new S3Client({
 let ensureBucketPromise: Promise<void> | null = null;
 
 async function ensureBucketExists() {
+  if (!shouldAutoCreateBucket) {
+    return;
+  }
+
   try {
     await s3Client.send(
       new HeadBucketCommand({
@@ -32,8 +38,18 @@ async function ensureBucketExists() {
       })
     );
     return;
-  } catch {
-    // Continue to create when bucket does not exist or is not yet reachable.
+  } catch (error) {
+    const statusCode = (error as { $metadata?: { httpStatusCode?: number } })
+      .$metadata?.httpStatusCode;
+    const errorName = (error as { name?: string }).name;
+    const isMissingBucket =
+      statusCode === 404 ||
+      errorName === 'NotFound' ||
+      errorName === 'NoSuchBucket';
+
+    if (!isMissingBucket) {
+      throw error;
+    }
   }
 
   await s3Client.send(
